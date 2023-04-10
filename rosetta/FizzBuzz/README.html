@@ -1,0 +1,58 @@
+<!DOCTYPE html><html  lang="en"><head><title>title</title><meta  charset="utf-8"></meta><meta  name="viewport" content="width=device-width"></meta><link  rel="icon" href="/favicon.svg"></link><link  rel="stylesheet" href="/styles.css"></link></head><body><div  class="top-header-extension"></div><header  class="top-header"><div  class="pkg-and-logo"><a  class="logo" href="/"><svg  viewBox="0 -6 51 58" fill="none" xmlns="http://www.w3.org/2000/svg" aria-labelledby="logo-link" role="img"><title  id="logo-link">Return to Roc packages</title><polygon  role="presentation" points="0,0 23.8834,3.21052 37.2438,19.0101 45.9665,16.6324 50.5,22 45,22 44.0315,26.3689 26.4673,39.3424 27.4527,45.2132 17.655,53 23.6751,22.7086"></polygon></svg></a><h1  class="pkg-full-name"><a  href="/index.html">Examples</a></h1></div><div  class="top-header-triangle"></div></header><main><h1>Rosetta Code - FizzBuzz</h1>
+<p>This is a Roc solution for the <a href="https://rosettacode.org/wiki/FizzBuzz">Rosetta Code FizzBuzz Problem</a>.</p>
+<blockquote>
+<p><em>Print the integers from 1 to 100, replacing; multiples of three with &quot;Fizz&quot;; multiples of five with &quot;Buzz&quot;; multiples of both three and five with &quot;FizzBuzz&quot;.</em></p>
+</blockquote>
+<h2>Output</h2>
+<p>Run this app with <code>roc run main.roc</code> to print the FizzBuzz sequence, or
+run unit tests with <code>roc test main.roc</code>.</p>
+<pre><samp>% roc run main.roc
+1,2,Fizz,4,Buzz,Fizz,7,8,Fizz,Buzz,11,Fizz,13,14,FizzBuzz,16,17,Fizz,19,Buzz,Fizz,22,23,Fizz,Buzz,26,Fizz,28,29,FizzBuzz,31,32,Fizz,34,Buzz,Fizz,37,38,Fizz,Buzz,41,Fizz,43,44,FizzBuzz,46,47,Fizz,49,Buzz,Fizz,52,53,Fizz,Buzz,56,Fizz,58,59,FizzBuzz,61,62,Fizz,64,Buzz,Fizz,67,68,Fizz,Buzz,71,Fizz,73,74,FizzBuzz,76,77,Fizz,79,Buzz,Fizz,82,83,Fizz,Buzz,86,Fizz,88,89,FizzBuzz,91,92,Fizz,94,Buzz,Fizz,97,98,Fizz,Buzz
+</pre></samp>
+<h2>Code</h2>
+<pre><samp><span class="kw">app</span><span class="literal"> "rosetta-example"</span><span class="kw">
+    packages</span><span class="delimeter"> {</span><span class="lowerident"> pf</span><span class="kw">:</span><span class="literal"> "https://github.com/roc-lang/basic-cli/releases/download/0.3.1/97mY3sUwo433-pcnEQUlMhn-sWiIf_J9bPhcAFZoqY4.tar.br"</span><span class="delimeter"> }</span><span class="kw">
+    imports</span><span class="delimeter"> [</span><span class="lowerident">
+        pf</span><span class="delimeter">.</span><span class="upperident">Stdout</span><span class="delimeter">,</span><span class="upperident">
+        Str</span><span class="delimeter">,</span><span class="delimeter">
+    ]</span><span class="kw">
+    provides</span><span class="delimeter"> [</span><span class="lowerident">main</span><span class="delimeter">]</span><span class="kw"> to</span><span class="lowerident"> pf</span><span class="lowerident">
+
+main</span><span class="kw"> =</span><span class="upperident">
+    List</span><span class="delimeter">.</span><span class="lowerident">range</span><span class="delimeter"> {</span><span class="lowerident"> start</span><span class="kw">:</span><span class="upperident"> At</span><span class="literal"> 1</span><span class="delimeter">,</span><span class="lowerident"> end</span><span class="kw">:</span><span class="upperident"> At</span><span class="literal"> 100</span><span class="delimeter"> }</span><span class="kw">
+    |&gt;</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="lowerident"> fizzBuzz</span><span class="kw">
+    |&gt;</span><span class="upperident"> Str</span><span class="delimeter">.</span><span class="lowerident">joinWith</span><span class="literal"> ","</span><span class="kw">
+    |&gt;</span><span class="upperident"> Stdout</span><span class="delimeter">.</span><span class="lowerident">line</span><span class="comment">
+
+## Determine the FizzBuzz value for a given integer. Returns "Fizz" for multiples</span><span class="comment">
+## of 3, "Buzz" for multiples of 5, "FizzBuzz" for multiples of both 3 and 5,</span><span class="comment">
+## and the original number as a string for all other values.</span><span class="lowerident">
+fizzBuzz</span><span class="kw"> :</span><span class="upperident"> I32</span><span class="kw"> -&gt;</span><span class="upperident"> Str</span><span class="lowerident">
+fizzBuzz</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">n</span><span class="kw"> -&gt;</span><span class="lowerident">
+    fizz</span><span class="kw"> =</span><span class="upperident"> Num</span><span class="delimeter">.</span><span class="lowerident">rem</span><span class="lowerident"> n</span><span class="literal"> 3</span><span class="op"> ==</span><span class="literal"> 0</span><span class="lowerident">
+    buzz</span><span class="kw"> =</span><span class="upperident"> Num</span><span class="delimeter">.</span><span class="lowerident">rem</span><span class="lowerident"> n</span><span class="literal"> 5</span><span class="op"> ==</span><span class="literal"> 0</span><span class="kw">
+
+    if</span><span class="lowerident"> fizz</span><span class="op"> &amp;&amp;</span><span class="lowerident"> buzz</span><span class="kw"> then</span><span class="literal">
+        "FizzBuzz"</span><span class="kw">
+    else</span><span class="kw"> if</span><span class="lowerident"> fizz</span><span class="op"> &amp;&amp;</span><span class="op"> !</span><span class="lowerident">buzz</span><span class="kw"> then</span><span class="literal">
+        "Fizz"</span><span class="kw">
+    else</span><span class="kw"> if</span><span class="op"> !</span><span class="lowerident">fizz</span><span class="op"> &amp;&amp;</span><span class="lowerident"> buzz</span><span class="kw"> then</span><span class="literal">
+        "Buzz"</span><span class="kw">
+    else</span><span class="upperident">
+        Num</span><span class="delimeter">.</span><span class="lowerident">toStr</span><span class="lowerident"> n</span><span class="comment">
+
+## Test Case 1: not a multiple of 3 or 5</span><span class="kw">
+expect</span><span class="lowerident"> fizzBuzz</span><span class="literal"> 1</span><span class="op"> ==</span><span class="literal"> "1"</span><span class="kw">
+expect</span><span class="lowerident"> fizzBuzz</span><span class="literal"> 7</span><span class="op"> ==</span><span class="literal"> "7"</span><span class="comment">
+
+## Test Case 2: multiple of 3</span><span class="kw">
+expect</span><span class="lowerident"> fizzBuzz</span><span class="literal"> 3</span><span class="op"> ==</span><span class="literal"> "Fizz"</span><span class="kw">
+expect</span><span class="lowerident"> fizzBuzz</span><span class="literal"> 9</span><span class="op"> ==</span><span class="literal"> "Fizz"</span><span class="comment">
+
+## Test Case 3: multiple of 5</span><span class="kw">
+expect</span><span class="lowerident"> fizzBuzz</span><span class="literal"> 5</span><span class="op"> ==</span><span class="literal"> "Buzz"</span><span class="kw">
+expect</span><span class="lowerident"> fizzBuzz</span><span class="literal"> 20</span><span class="op"> ==</span><span class="literal"> "Buzz"</span><span class="comment">
+
+## Test Case 4: multiple of both 3 and 5</span><span class="kw">
+expect</span><span class="lowerident"> fizzBuzz</span><span class="literal"> 15</span><span class="op"> ==</span><span class="literal"> "FizzBuzz"</span><span class="kw">
+expect</span><span class="lowerident"> fizzBuzz</span><span class="literal"> 45</span><span class="op"> ==</span><span class="literal"> "FizzBuzz"</span></samp></pre></main><footer><p>Made by people who like to make nice things.</p><p> © 2023</p></footer></body></html>

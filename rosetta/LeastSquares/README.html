@@ -1,0 +1,41 @@
+<!DOCTYPE html><html  lang="en"><head><title>title</title><meta  charset="utf-8"></meta><meta  name="viewport" content="width=device-width"></meta><link  rel="icon" href="/favicon.svg"></link><link  rel="stylesheet" href="/styles.css"></link></head><body><div  class="top-header-extension"></div><header  class="top-header"><div  class="pkg-and-logo"><a  class="logo" href="/"><svg  viewBox="0 -6 51 58" fill="none" xmlns="http://www.w3.org/2000/svg" aria-labelledby="logo-link" role="img"><title  id="logo-link">Return to Roc packages</title><polygon  role="presentation" points="0,0 23.8834,3.21052 37.2438,19.0101 45.9665,16.6324 50.5,22 45,22 44.0315,26.3689 26.4673,39.3424 27.4527,45.2132 17.655,53 23.6751,22.7086"></polygon></svg></a><h1  class="pkg-full-name"><a  href="/index.html">Examples</a></h1></div><div  class="top-header-triangle"></div></header><main><h1>Rosetta Code - Least Square Difference</h1>
+<p>This is a Roc solution for the <a href="https://rosettacode.org/wiki/Find_square_difference">Rosetta Code Find Square Difference Problem</a></p>
+<blockquote>
+<p><em>Find the least positive integer number <code>n</code>, where the difference of <code>n*n</code> and 
+<code>(n-1)*(n-1)</code> is greater than 1000.</em></p>
+</blockquote>
+<h2>Output</h2>
+<pre><samp>% roc run main.roc      
+The least positive integer n, where the difference of n*n and (n-1)*(n-1) is greater than 1000, is 501
+</pre></samp>
+<p>Run unit tests with <code>roc test main.roc</code></p>
+<h2>Code</h2>
+<pre><samp><span class="kw">app</span><span class="literal"> "rosetta-example"</span><span class="kw">
+    packages</span><span class="delimeter"> {</span><span class="lowerident"> pf</span><span class="kw">:</span><span class="literal"> "https://github.com/roc-lang/basic-cli/releases/download/0.3.1/97mY3sUwo433-pcnEQUlMhn-sWiIf_J9bPhcAFZoqY4.tar.br"</span><span class="delimeter"> }</span><span class="kw">
+    imports</span><span class="delimeter"> [</span><span class="lowerident">
+        pf</span><span class="delimeter">.</span><span class="upperident">Stdout</span><span class="delimeter">,</span><span class="delimeter">
+    ]</span><span class="kw">
+    provides</span><span class="delimeter"> [</span><span class="lowerident">main</span><span class="delimeter">]</span><span class="kw"> to</span><span class="lowerident"> pf</span><span class="lowerident">
+
+main</span><span class="kw"> =</span><span class="lowerident">
+    nStr</span><span class="kw"> =</span><span class="lowerident"> findNumber</span><span class="literal"> 1</span><span class="kw"> |&gt;</span><span class="upperident"> Num</span><span class="delimeter">.</span><span class="lowerident">toStr</span><span class="upperident">
+
+    Stdout</span><span class="delimeter">.</span><span class="lowerident">line</span><span class="literal"> "The least positive integer n, where the difference of n*n and (n-1)*(n-1) is greater than 1000, is \(nStr)"</span><span class="comment">
+
+## A recursive function that takes an `U32` as its input and returns the least</span><span class="comment">
+## positive integer number `n`, where the difference of `n*n` and `(n-1)*(n-1)`</span><span class="comment">
+## is greater than 1000.</span><span class="comment">
+##</span><span class="comment">
+## The input `n` should be a positive integer, and the function will return an</span><span class="comment">
+## `U32`representing the least positive integer that satisfies the condition.</span><span class="comment">
+##</span><span class="lowerident">
+findNumber</span><span class="kw"> :</span><span class="upperident"> U32</span><span class="kw"> -&gt;</span><span class="upperident"> U32</span><span class="lowerident">
+findNumber</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">n</span><span class="kw"> -&gt;</span><span class="lowerident">
+    difference</span><span class="kw"> =</span><span class="upperident"> Num</span><span class="delimeter">.</span><span class="lowerident">sub</span><span class="delimeter"> (</span><span class="upperident">Num</span><span class="delimeter">.</span><span class="lowerident">powInt</span><span class="lowerident"> n</span><span class="literal"> 2</span><span class="delimeter">)</span><span class="delimeter"> (</span><span class="upperident">Num</span><span class="delimeter">.</span><span class="lowerident">powInt</span><span class="delimeter"> (</span><span class="lowerident">n</span><span class="op"> -</span><span class="literal"> 1</span><span class="delimeter">)</span><span class="literal"> 2</span><span class="delimeter">)</span><span class="kw">
+
+    if</span><span class="lowerident"> difference</span><span class="op"> &gt;</span><span class="literal"> 1000</span><span class="kw"> then</span><span class="lowerident">
+        n</span><span class="kw">
+    else</span><span class="lowerident">
+        findNumber</span><span class="delimeter"> (</span><span class="lowerident">n</span><span class="op"> +</span><span class="literal"> 1</span><span class="delimeter">)</span><span class="kw">
+
+expect</span><span class="lowerident"> findNumber</span><span class="literal"> 1</span><span class="op"> ==</span><span class="literal"> 501</span></samp></pre></main><footer><p>Made by people who like to make nice things.</p><p> © 2023</p></footer></body></html>
