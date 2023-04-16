@@ -1,0 +1,149 @@
+<!DOCTYPE html><html  lang="en"><head><title>title</title><meta  charset="utf-8"></meta><meta  name="viewport" content="width=device-width"></meta><link  rel="icon" href="/favicon.svg"></link><link  rel="stylesheet" href="/styles.css"></link></head><body><div  class="top-header-extension"></div><header  class="top-header"><div  class="pkg-and-logo"><a  class="logo" href="/"><svg  viewBox="0 -6 51 58" fill="none" xmlns="http://www.w3.org/2000/svg" aria-labelledby="logo-link" role="img"><title  id="logo-link">Return to Roc packages</title><polygon  role="presentation" points="0,0 23.8834,3.21052 37.2438,19.0101 45.9665,16.6324 50.5,22 45,22 44.0315,26.3689 26.4673,39.3424 27.4527,45.2132 17.655,53 23.6751,22.7086"></polygon></svg></a><h1  class="pkg-full-name"><a  href="/index.html">Examples</a></h1></div><div  class="top-header-triangle"></div></header><main><h1>Graph</h1>
+<p>This is a an example implementation of Depth First Search and Breadth First Search (DFS/BFS) using Roc.</p>
+<h2>Output</h2>
+<pre><samp>% roc test examples/Graph/Graph.roc
+
+0 failed and 2 passed in 670 ms.
+
+</pre></samp>
+<h2>Code</h2>
+<pre><samp><span class="comment">## The Graph interface represents a graph using an adjacency list and exposes</span><span class="comment">
+## functions for working with graphs, such as creating one from a list and</span><span class="comment">
+## performing a depth-first or breadth-first search.</span><span class="kw">
+interface</span><span class="upperident"> Graph</span><span class="kw">
+    exposes</span><span class="delimeter"> [</span><span class="upperident">
+        Graph</span><span class="delimeter">,</span><span class="lowerident">
+        fromList</span><span class="delimeter">,</span><span class="lowerident">
+        dfs</span><span class="delimeter">,</span><span class="lowerident">
+        bfs</span><span class="delimeter">,</span><span class="delimeter">
+    ]</span><span class="kw">
+    imports</span><span class="delimeter"> [</span><span class="upperident">
+        Dict</span><span class="delimeter">,</span><span class="delimeter">
+    ]</span><span class="comment">
+
+## Graph type representing a graph as a dictionary of adjacency lists</span><span class="comment">
+## where each key is a vertex and each value is a list of its adjacent vertices.</span><span class="upperident">
+Graph</span><span class="lowerident"> a</span><span class="kw"> :=</span><span class="upperident"> Dict</span><span class="lowerident"> a</span><span class="delimeter"> (</span><span class="upperident">List</span><span class="lowerident"> a</span><span class="delimeter">)</span><span class="delimeter"> |</span><span class="lowerident"> a</span><span class="lowerident"> has</span><span class="upperident"> Eq</span><span class="comment">
+
+## Create a Graph from an adjacency list.</span><span class="lowerident">
+fromList</span><span class="kw"> :</span><span class="upperident"> List</span><span class="delimeter"> (</span><span class="lowerident">a</span><span class="delimeter">,</span><span class="upperident"> List</span><span class="lowerident"> a</span><span class="delimeter">)</span><span class="kw"> -&gt;</span><span class="upperident"> Graph</span><span class="lowerident"> a</span><span class="lowerident">
+fromList</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">adjacencyList</span><span class="kw"> -&gt;</span><span class="lowerident">
+    emptyDict</span><span class="kw"> =</span><span class="upperident"> Dict</span><span class="delimeter">.</span><span class="lowerident">withCapacity</span><span class="delimeter"> (</span><span class="upperident">List</span><span class="delimeter">.</span><span class="lowerident">len</span><span class="lowerident"> adjacencyList</span><span class="delimeter">)</span><span class="lowerident">
+
+    update</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">dict</span><span class="delimeter">,</span><span class="delimeter"> (</span><span class="lowerident">vertex</span><span class="delimeter">,</span><span class="lowerident"> edges</span><span class="delimeter">)</span><span class="kw"> -&gt;</span><span class="upperident">
+        Dict</span><span class="delimeter">.</span><span class="lowerident">insert</span><span class="lowerident"> dict</span><span class="lowerident"> vertex</span><span class="lowerident"> edges</span><span class="upperident">
+
+    List</span><span class="delimeter">.</span><span class="lowerident">walk</span><span class="lowerident"> adjacencyList</span><span class="lowerident"> emptyDict</span><span class="lowerident"> update</span><span class="kw">
+    |&gt;</span><span class="kw"> @</span><span class="upperident">Graph</span><span class="comment">
+
+## Perform a depth-first search on a graph to find a target vertex.</span><span class="comment">
+##</span><span class="comment">
+## - `isTarget` : A function that returns true if a vertex is the target.</span><span class="comment">
+## - `root`     : The starting vertex for the search.</span><span class="comment">
+## - `graph`    : The graph to perform the search on.</span><span class="comment">
+##</span><span class="lowerident">
+dfs</span><span class="kw"> :</span><span class="delimeter"> (</span><span class="lowerident">a</span><span class="kw"> -&gt;</span><span class="upperident"> Bool</span><span class="delimeter">)</span><span class="delimeter">,</span><span class="lowerident"> a</span><span class="delimeter">,</span><span class="upperident"> Graph</span><span class="lowerident"> a</span><span class="kw"> -&gt;</span><span class="upperident"> Result</span><span class="lowerident"> a</span><span class="delimeter"> [</span><span class="upperident">NotFound</span><span class="delimeter">]</span><span class="lowerident">
+dfs</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">isTarget</span><span class="delimeter">,</span><span class="lowerident"> root</span><span class="delimeter">,</span><span class="kw"> @</span><span class="upperident">Graph</span><span class="lowerident"> graph</span><span class="kw"> -&gt;</span><span class="lowerident">
+    dfsHelper</span><span class="lowerident"> isTarget</span><span class="delimeter"> [</span><span class="lowerident">root</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="lowerident"> graph</span><span class="comment">
+
+# A helper function for performing the depth-first search.</span><span class="comment">
+#</span><span class="comment">
+# `isTarget` : A function that returns true if a vertex is the target.</span><span class="comment">
+# `stack`    : A list of vertices to visit.</span><span class="comment">
+# `visited`  : A list of visited vertices.</span><span class="comment">
+# `graph`    : The graph to perform the search on.</span><span class="comment">
+#</span><span class="lowerident">
+dfsHelper</span><span class="kw"> :</span><span class="delimeter"> (</span><span class="lowerident">a</span><span class="kw"> -&gt;</span><span class="upperident"> Bool</span><span class="delimeter">)</span><span class="delimeter">,</span><span class="upperident"> List</span><span class="lowerident"> a</span><span class="delimeter">,</span><span class="upperident"> List</span><span class="lowerident"> a</span><span class="delimeter">,</span><span class="upperident"> Dict</span><span class="lowerident"> a</span><span class="delimeter"> (</span><span class="upperident">List</span><span class="lowerident"> a</span><span class="delimeter">)</span><span class="kw"> -&gt;</span><span class="upperident"> Result</span><span class="lowerident"> a</span><span class="delimeter"> [</span><span class="upperident">NotFound</span><span class="delimeter">]</span><span class="lowerident">
+dfsHelper</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">isTarget</span><span class="delimeter">,</span><span class="lowerident"> stack</span><span class="delimeter">,</span><span class="lowerident"> visited</span><span class="delimeter">,</span><span class="lowerident"> graph</span><span class="kw"> -&gt;</span><span class="kw">
+    when</span><span class="lowerident"> stack</span><span class="kw"> is</span><span class="delimeter">
+        [</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="upperident">
+            Err</span><span class="upperident"> NotFound</span><span class="delimeter">
+
+        [</span><span class="lowerident">current</span><span class="delimeter">,</span><span class="delimeter"> .</span><span class="delimeter">.</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="lowerident">
+            rest</span><span class="kw"> =</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">dropFirst</span><span class="lowerident"> stack</span><span class="kw">
+
+            if</span><span class="lowerident"> isTarget</span><span class="lowerident"> current</span><span class="kw"> then</span><span class="upperident">
+                Ok</span><span class="lowerident"> current</span><span class="kw">
+            else</span><span class="kw"> if</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">contains</span><span class="lowerident"> visited</span><span class="lowerident"> current</span><span class="kw"> then</span><span class="lowerident">
+                dfsHelper</span><span class="lowerident"> isTarget</span><span class="lowerident"> rest</span><span class="lowerident"> visited</span><span class="lowerident"> graph</span><span class="kw">
+            else</span><span class="lowerident">
+                newVisited</span><span class="kw"> =</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">append</span><span class="lowerident"> visited</span><span class="lowerident"> current</span><span class="kw">
+
+                when</span><span class="upperident"> Dict</span><span class="delimeter">.</span><span class="lowerident">get</span><span class="lowerident"> graph</span><span class="lowerident"> current</span><span class="kw"> is</span><span class="upperident">
+                    Ok</span><span class="lowerident"> neighbors</span><span class="kw"> -&gt;</span><span class="comment">
+                        # newly explored nodes are added to the START of the stack</span><span class="lowerident">
+                        newStack</span><span class="kw"> =</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">concat</span><span class="lowerident"> neighbors</span><span class="lowerident"> rest</span><span class="lowerident">
+
+                        dfsHelper</span><span class="lowerident"> isTarget</span><span class="lowerident"> newStack</span><span class="lowerident"> newVisited</span><span class="lowerident"> graph</span><span class="upperident">
+
+                    Err</span><span class="upperident"> KeyNotFound</span><span class="kw"> -&gt;</span><span class="lowerident">
+                        dfsHelper</span><span class="lowerident"> isTarget</span><span class="lowerident"> rest</span><span class="lowerident"> newVisited</span><span class="lowerident"> graph</span><span class="comment">
+
+## Perform a breadth-first search on a graph to find a target vertex.</span><span class="comment">
+##</span><span class="comment">
+## - `isTarget` : A function that returns true if a vertex is the target.</span><span class="comment">
+## - `root`     : The starting vertex for the search.</span><span class="comment">
+## - `graph`    : The graph to perform the search on.</span><span class="lowerident">
+bfs</span><span class="kw"> :</span><span class="delimeter"> (</span><span class="lowerident">a</span><span class="kw"> -&gt;</span><span class="upperident"> Bool</span><span class="delimeter">)</span><span class="delimeter">,</span><span class="lowerident"> a</span><span class="delimeter">,</span><span class="upperident"> Graph</span><span class="lowerident"> a</span><span class="kw"> -&gt;</span><span class="upperident"> Result</span><span class="lowerident"> a</span><span class="delimeter"> [</span><span class="upperident">NotFound</span><span class="delimeter">]</span><span class="lowerident">
+bfs</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">isTarget</span><span class="delimeter">,</span><span class="lowerident"> root</span><span class="delimeter">,</span><span class="kw"> @</span><span class="upperident">Graph</span><span class="lowerident"> graph</span><span class="kw"> -&gt;</span><span class="lowerident">
+    bfsHelper</span><span class="lowerident"> isTarget</span><span class="delimeter"> [</span><span class="lowerident">root</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="lowerident"> graph</span><span class="comment">
+
+# A helper function for performing the breadth-first search.</span><span class="comment">
+#</span><span class="comment">
+# `isTarget` : A function that returns true if a vertex is the target.</span><span class="comment">
+# `stack`    : A list of vertices to visit.</span><span class="comment">
+# `visited`  : A list of visited vertices.</span><span class="comment">
+# `graph`    : The graph to perform the search on.</span><span class="lowerident">
+bfsHelper</span><span class="kw"> :</span><span class="delimeter"> (</span><span class="lowerident">a</span><span class="kw"> -&gt;</span><span class="upperident"> Bool</span><span class="delimeter">)</span><span class="delimeter">,</span><span class="upperident"> List</span><span class="lowerident"> a</span><span class="delimeter">,</span><span class="upperident"> List</span><span class="lowerident"> a</span><span class="delimeter">,</span><span class="upperident"> Dict</span><span class="lowerident"> a</span><span class="delimeter"> (</span><span class="upperident">List</span><span class="lowerident"> a</span><span class="delimeter">)</span><span class="kw"> -&gt;</span><span class="upperident"> Result</span><span class="lowerident"> a</span><span class="delimeter"> [</span><span class="upperident">NotFound</span><span class="delimeter">]</span><span class="lowerident">
+bfsHelper</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">isTarget</span><span class="delimeter">,</span><span class="lowerident"> stack</span><span class="delimeter">,</span><span class="lowerident"> visited</span><span class="delimeter">,</span><span class="lowerident"> graph</span><span class="kw"> -&gt;</span><span class="kw">
+    when</span><span class="lowerident"> stack</span><span class="kw"> is</span><span class="delimeter">
+        [</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="upperident">
+            Err</span><span class="upperident"> NotFound</span><span class="delimeter">
+
+        [</span><span class="lowerident">current</span><span class="delimeter">,</span><span class="delimeter"> .</span><span class="delimeter">.</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="lowerident">
+            rest</span><span class="kw"> =</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">dropFirst</span><span class="lowerident"> stack</span><span class="kw">
+
+            if</span><span class="lowerident"> isTarget</span><span class="lowerident"> current</span><span class="kw"> then</span><span class="upperident">
+                Ok</span><span class="lowerident"> current</span><span class="kw">
+            else</span><span class="kw"> if</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">contains</span><span class="lowerident"> visited</span><span class="lowerident"> current</span><span class="kw"> then</span><span class="lowerident">
+                bfsHelper</span><span class="lowerident"> isTarget</span><span class="lowerident"> rest</span><span class="lowerident"> visited</span><span class="lowerident"> graph</span><span class="kw">
+            else</span><span class="lowerident">
+                newVisited</span><span class="kw"> =</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">append</span><span class="lowerident"> visited</span><span class="lowerident"> current</span><span class="kw">
+
+                when</span><span class="upperident"> Dict</span><span class="delimeter">.</span><span class="lowerident">get</span><span class="lowerident"> graph</span><span class="lowerident"> current</span><span class="kw"> is</span><span class="upperident">
+                    Ok</span><span class="lowerident"> neighbors</span><span class="kw"> -&gt;</span><span class="comment">
+                        # newly explored nodes are added to the END of the stack</span><span class="lowerident">
+                        newStack</span><span class="kw"> =</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">concat</span><span class="lowerident"> rest</span><span class="lowerident"> neighbors</span><span class="lowerident">
+
+                        bfsHelper</span><span class="lowerident"> isTarget</span><span class="lowerident"> newStack</span><span class="lowerident"> newVisited</span><span class="lowerident"> graph</span><span class="upperident">
+
+                    Err</span><span class="upperident"> KeyNotFound</span><span class="kw"> -&gt;</span><span class="lowerident">
+                        bfsHelper</span><span class="lowerident"> isTarget</span><span class="lowerident"> rest</span><span class="lowerident"> newVisited</span><span class="lowerident"> graph</span><span class="comment">
+
+# Some helpers for testing</span><span class="lowerident">
+isTestTarget</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">vertex</span><span class="kw"> -&gt;</span><span class="lowerident"> vertex</span><span class="op"> ==</span><span class="literal"> "F"</span><span class="lowerident">
+testStart</span><span class="kw"> =</span><span class="literal"> "A"</span><span class="lowerident">
+testGraph</span><span class="kw"> =</span><span class="delimeter">
+    [</span><span class="delimeter">
+        (</span><span class="literal">"A"</span><span class="delimeter">,</span><span class="delimeter"> [</span><span class="literal">"B"</span><span class="delimeter">,</span><span class="literal"> "C"</span><span class="delimeter">]</span><span class="delimeter">)</span><span class="delimeter">,</span><span class="delimeter">
+        (</span><span class="literal">"B"</span><span class="delimeter">,</span><span class="delimeter"> [</span><span class="literal">"D"</span><span class="delimeter">,</span><span class="literal"> "E"</span><span class="delimeter">]</span><span class="delimeter">)</span><span class="delimeter">,</span><span class="delimeter">
+        (</span><span class="literal">"C"</span><span class="delimeter">,</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter">)</span><span class="delimeter">,</span><span class="delimeter">
+        (</span><span class="literal">"D"</span><span class="delimeter">,</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter">)</span><span class="delimeter">,</span><span class="delimeter">
+        (</span><span class="literal">"E"</span><span class="delimeter">,</span><span class="delimeter"> [</span><span class="literal">"F"</span><span class="delimeter">]</span><span class="delimeter">)</span><span class="delimeter">,</span><span class="delimeter">
+        (</span><span class="literal">"F"</span><span class="delimeter">,</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter">)</span><span class="delimeter">,</span><span class="delimeter">
+    ]</span><span class="kw">
+    |&gt;</span><span class="lowerident"> fromList</span><span class="comment">
+
+# Test using depth-first search.</span><span class="kw">
+expect</span><span class="lowerident">
+    actual</span><span class="kw"> =</span><span class="lowerident"> dfs</span><span class="lowerident"> isTestTarget</span><span class="lowerident"> testStart</span><span class="lowerident"> testGraph</span><span class="lowerident">
+    expected</span><span class="kw"> =</span><span class="upperident"> Ok</span><span class="literal"> "F"</span><span class="lowerident">
+
+    actual</span><span class="op"> ==</span><span class="lowerident"> expected</span><span class="comment">
+
+## Test and breadth-first search.</span><span class="kw">
+expect</span><span class="lowerident">
+    actual</span><span class="kw"> =</span><span class="lowerident"> bfs</span><span class="lowerident"> isTestTarget</span><span class="lowerident"> testStart</span><span class="lowerident"> testGraph</span><span class="lowerident">
+    expected</span><span class="kw"> =</span><span class="upperident"> Ok</span><span class="literal"> "F"</span><span class="lowerident">
+
+    actual</span><span class="op"> ==</span><span class="lowerident"> expected</span></samp></pre></main><footer><p>Made by people who like to make nice things.</p><p> © 2023</p></footer></body></html>
