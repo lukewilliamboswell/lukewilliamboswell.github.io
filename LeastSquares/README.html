@@ -1,13 +1,13 @@
 <!DOCTYPE html><html  lang="en"><head><title>title</title><meta  charset="utf-8"></meta><meta  name="viewport" content="width=device-width"></meta><link  rel="icon" href="/favicon.svg"></link><link  rel="stylesheet" href="/styles.css"></link></head><body><div  class="top-header-extension"></div><header  class="top-header"><div  class="pkg-and-logo"><a  class="logo" href="/"><svg  viewBox="0 -6 51 58" fill="none" xmlns="http://www.w3.org/2000/svg" aria-labelledby="logo-link" role="img"><title  id="logo-link">Return to Roc packages</title><polygon  role="presentation" points="0,0 23.8834,3.21052 37.2438,19.0101 45.9665,16.6324 50.5,22 45,22 44.0315,26.3689 26.4673,39.3424 27.4527,45.2132 17.655,53 23.6751,22.7086"></polygon></svg></a><h1  class="pkg-full-name"><a  href="/index.html">Examples</a></h1></div><div  class="top-header-triangle"></div></header><main><h1>Problem - Least Square Difference</h1>
 <p>This is a Roc solution for the following <a href="https://en.wikipedia.org/wiki/Least_squares">Least Squares</a> problem.</p>
 <blockquote>
-<p><em>Write a program that prints the least positive integer number <code>n</code>, where the difference of <code>n*n</code> and <code>(n-1)*(n-1)</code> is greater than 1000.</em></p>
+<p><em>Write a program that prints the least positive integer number <code><span class="lowerident">n</span></code>, where the difference of <code><span class="lowerident">n</span><span class="op">*</span><span class="lowerident">n</span></code> and <code><span class="delimeter">(</span><span class="lowerident">n</span><span class="op">-</span><span class="literal">1</span><span class="delimeter">)</span><span class="op">*</span><span class="delimeter">(</span><span class="lowerident">n</span><span class="op">-</span><span class="literal">1</span><span class="delimeter">)</span></code> is greater than 1000.</em></p>
 </blockquote>
 <h2>Output</h2>
 <pre><samp>% roc run main.roc      
 The least positive integer n, where the difference of n*n and (n-1)*(n-1) is greater than 1000, is 501
 </pre></samp>
-<p>Run unit tests with <code>roc test main.roc</code></p>
+<p>Run unit tests with <code><span class="lowerident">roc</span><span class="lowerident"> test</span><span class="lowerident"> main</span><span class="delimeter">.</span><span class="lowerident">roc</span></code></p>
 <h2>Code</h2>
 <pre><samp><span class="kw">app</span><span class="literal"> "example"</span><span class="kw">
     packages</span><span class="delimeter"> {</span><span class="lowerident"> pf</span><span class="kw">:</span><span class="literal"> "https://github.com/roc-lang/basic-cli/releases/download/0.3.1/97mY3sUwo433-pcnEQUlMhn-sWiIf_J9bPhcAFZoqY4.tar.br"</span><span class="delimeter"> }</span><span class="kw">

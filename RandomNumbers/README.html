@@ -1,0 +1,45 @@
+<!DOCTYPE html><html  lang="en"><head><title>title</title><meta  charset="utf-8"></meta><meta  name="viewport" content="width=device-width"></meta><link  rel="icon" href="/favicon.svg"></link><link  rel="stylesheet" href="/styles.css"></link></head><body><div  class="top-header-extension"></div><header  class="top-header"><div  class="pkg-and-logo"><a  class="logo" href="/"><svg  viewBox="0 -6 51 58" fill="none" xmlns="http://www.w3.org/2000/svg" aria-labelledby="logo-link" role="img"><title  id="logo-link">Return to Roc packages</title><polygon  role="presentation" points="0,0 23.8834,3.21052 37.2438,19.0101 45.9665,16.6324 50.5,22 45,22 44.0315,26.3689 26.4673,39.3424 27.4527,45.2132 17.655,53 23.6751,22.7086"></polygon></svg></a><h1  class="pkg-full-name"><a  href="/index.html">Examples</a></h1></div><div  class="top-header-triangle"></div></header><main><h1>Random Numbers</h1>
+<p>This is example uses the <a href="https://github.com/JanCVanB/roc-random">JanCVanB/roc-random</a> package and Roc's <a href="https://github.com/roc-lang/basic-cli">basic-cli platform</a> to generate a list of random numbers.</p>
+<h2>Output</h2>
+<pre><samp>% roc run examples/RandomNumbers/main.roc
+Random numbers are: 37,31,29,34,67,28,46,41,63,30
+</pre></samp>
+<h2>Code</h2>
+<pre><samp><span class="kw">app</span><span class="literal"> "example"</span><span class="kw">
+    packages</span><span class="delimeter"> {</span><span class="lowerident">
+        pf</span><span class="kw">:</span><span class="literal"> "https://github.com/roc-lang/basic-cli/releases/download/0.3.1/97mY3sUwo433-pcnEQUlMhn-sWiIf_J9bPhcAFZoqY4.tar.br"</span><span class="delimeter">,</span><span class="lowerident">
+        rand</span><span class="kw">:</span><span class="literal"> "https://github.com/lukewilliamboswell/roc-random/releases/download/0.0.1/x_XwrgehcQI4KukXligrAkWTavqDAdE5jGamURpaX-M.tar.br"</span><span class="delimeter">,</span><span class="delimeter">
+    }</span><span class="kw">
+    imports</span><span class="delimeter"> [</span><span class="lowerident">
+        pf</span><span class="delimeter">.</span><span class="upperident">Stdout</span><span class="delimeter">,</span><span class="lowerident">
+        rand</span><span class="delimeter">.</span><span class="upperident">Random</span><span class="delimeter">,</span><span class="delimeter">
+    ]</span><span class="kw">
+    provides</span><span class="delimeter"> [</span><span class="lowerident">main</span><span class="delimeter">]</span><span class="kw"> to</span><span class="lowerident"> pf</span><span class="comment">
+
+# Print a list of 10 random numbers in the range 25-75 inclusive.</span><span class="lowerident">
+main</span><span class="kw"> =</span><span class="comment">
+
+    # Initialise "randomness"</span><span class="lowerident">
+    initialSeed</span><span class="kw"> =</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">seed16</span><span class="literal"> 42</span><span class="comment">
+
+    # Create a generator for values from 25-75 (inclusive)</span><span class="lowerident">
+    u16</span><span class="kw"> =</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">u16</span><span class="literal"> 25</span><span class="literal"> 75</span><span class="comment">
+
+    # Create a list of random numbers</span><span class="lowerident">
+    result</span><span class="kw"> =</span><span class="upperident">
+        List</span><span class="delimeter">.</span><span class="lowerident">range</span><span class="delimeter"> {</span><span class="lowerident"> start</span><span class="kw">:</span><span class="upperident"> At</span><span class="literal"> 0</span><span class="delimeter">,</span><span class="lowerident"> end</span><span class="kw">:</span><span class="upperident"> Before</span><span class="literal"> 10</span><span class="delimeter"> }</span><span class="kw">
+        |&gt;</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">walk</span><span class="delimeter"> {</span><span class="lowerident"> seed</span><span class="kw">:</span><span class="lowerident"> initialSeed</span><span class="delimeter">,</span><span class="lowerident"> numbers</span><span class="kw">:</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter"> }</span><span class="kw"> \</span><span class="lowerident">state</span><span class="delimeter">,</span><span class="lowerident"> _</span><span class="kw"> -&gt;</span><span class="lowerident">
+
+            random</span><span class="kw"> =</span><span class="lowerident"> u16</span><span class="lowerident"> state</span><span class="delimeter">.</span><span class="lowerident">seed</span><span class="lowerident">
+            seed</span><span class="kw"> =</span><span class="lowerident"> random</span><span class="delimeter">.</span><span class="lowerident">state</span><span class="lowerident">
+            numbers</span><span class="kw"> =</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">append</span><span class="lowerident"> state</span><span class="delimeter">.</span><span class="lowerident">numbers</span><span class="lowerident"> random</span><span class="delimeter">.</span><span class="lowerident">value</span><span class="delimeter">
+
+            {</span><span class="lowerident"> seed</span><span class="delimeter">,</span><span class="lowerident"> numbers</span><span class="delimeter"> }</span><span class="comment">
+
+    # Format as a string</span><span class="lowerident">
+    numbersListStr</span><span class="kw"> =</span><span class="lowerident">
+        result</span><span class="delimeter">.</span><span class="lowerident">numbers</span><span class="kw">
+        |&gt;</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="upperident"> Num</span><span class="delimeter">.</span><span class="lowerident">toStr</span><span class="kw">
+        |&gt;</span><span class="upperident"> Str</span><span class="delimeter">.</span><span class="lowerident">joinWith</span><span class="literal"> ","</span><span class="upperident">
+
+    Stdout</span><span class="delimeter">.</span><span class="lowerident">line</span><span class="literal"> "Random numbers are: \(numbersListStr)"</span></samp></pre></main><footer><p>Made by people who like to make nice things.</p><p> © 2023</p></footer></body></html>

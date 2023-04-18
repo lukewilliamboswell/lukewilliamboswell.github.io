@@ -11,75 +11,76 @@
     imports</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="comment">
 
 # Pattern match on an empty list</span><span class="kw">
-expect</span><span class="lowerident"> 
+expect</span><span class="lowerident">
     patternMatch</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">input</span><span class="kw"> -&gt;</span><span class="kw">
-        when</span><span class="lowerident"> input</span><span class="kw"> is</span><span class="delimeter"> 
+        when</span><span class="lowerident"> input</span><span class="kw"> is</span><span class="delimeter">
             [</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="upperident"> EmptyList</span><span class="lowerident">
-            _</span><span class="kw"> -&gt;</span><span class="upperident"> Other</span><span class="lowerident">
+            _</span><span class="kw"> -&gt;</span><span class="upperident"> Other</span><span class="delimeter">
 
-    patternMatch</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="op"> ==</span><span class="upperident"> EmptyList</span><span class="op"> &amp;&amp;</span><span class="lowerident"> 
-    patternMatch</span><span class="delimeter"> [</span><span class="upperident">A</span><span class="delimeter">,</span><span class="upperident"> B</span><span class="delimeter">,</span><span class="upperident"> C</span><span class="delimeter">]</span><span class="op"> !=</span><span class="upperident"> EmptyList</span><span class="comment">
+    (</span><span class="lowerident">patternMatch</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="op"> ==</span><span class="upperident"> EmptyList</span><span class="delimeter">)</span><span class="op">
+    &amp;&amp;</span><span class="delimeter"> (</span><span class="lowerident">patternMatch</span><span class="delimeter"> [</span><span class="upperident">A</span><span class="delimeter">,</span><span class="upperident"> B</span><span class="delimeter">,</span><span class="upperident"> C</span><span class="delimeter">]</span><span class="op"> !=</span><span class="upperident"> EmptyList</span><span class="delimeter">)</span><span class="comment">
 
 # Pattern match on a non-empty list</span><span class="kw">
-expect</span><span class="lowerident"> 
+expect</span><span class="lowerident">
     patternMatch</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">input</span><span class="kw"> -&gt;</span><span class="kw">
-        when</span><span class="lowerident"> input</span><span class="kw"> is</span><span class="delimeter"> 
+        when</span><span class="lowerident"> input</span><span class="kw"> is</span><span class="delimeter">
             [</span><span class="lowerident">_</span><span class="delimeter">,</span><span class="delimeter"> .</span><span class="delimeter">.</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="upperident"> NonEmptyList</span><span class="lowerident">
-            _</span><span class="kw"> -&gt;</span><span class="upperident"> Other</span><span class="lowerident">
+            _</span><span class="kw"> -&gt;</span><span class="upperident"> Other</span><span class="delimeter">
 
-    patternMatch</span><span class="delimeter"> [</span><span class="upperident">A</span><span class="delimeter">,</span><span class="upperident"> B</span><span class="delimeter">,</span><span class="upperident"> C</span><span class="delimeter">]</span><span class="op"> ==</span><span class="upperident"> NonEmptyList</span><span class="op"> &amp;&amp;</span><span class="lowerident">
-    patternMatch</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="op"> !=</span><span class="upperident"> NonEmptyList</span><span class="comment">
+    (</span><span class="lowerident">patternMatch</span><span class="delimeter"> [</span><span class="upperident">A</span><span class="delimeter">,</span><span class="upperident"> B</span><span class="delimeter">,</span><span class="upperident"> C</span><span class="delimeter">]</span><span class="op"> ==</span><span class="upperident"> NonEmptyList</span><span class="delimeter">)</span><span class="op">
+    &amp;&amp;</span><span class="delimeter"> (</span><span class="lowerident">patternMatch</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="op"> !=</span><span class="upperident"> NonEmptyList</span><span class="delimeter">)</span><span class="comment">
 
 # Pattern match on a list that starts with exactly Foo tag</span><span class="kw">
-expect</span><span class="lowerident"> 
+expect</span><span class="lowerident">
     patternMatch</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">input</span><span class="kw"> -&gt;</span><span class="kw">
-        when</span><span class="lowerident"> input</span><span class="kw"> is</span><span class="delimeter"> 
+        when</span><span class="lowerident"> input</span><span class="kw"> is</span><span class="delimeter">
             [</span><span class="upperident">Foo</span><span class="delimeter">,</span><span class="delimeter"> .</span><span class="delimeter">.</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="upperident"> StartsWithFoo</span><span class="lowerident">
-            _</span><span class="kw"> -&gt;</span><span class="upperident"> Other</span><span class="lowerident">
-    
-    patternMatch</span><span class="delimeter"> [</span><span class="upperident">Foo</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">,</span><span class="upperident"> Baz</span><span class="delimeter">]</span><span class="op"> ==</span><span class="upperident"> StartsWithFoo</span><span class="op"> &amp;&amp;</span><span class="lowerident"> 
-    patternMatch</span><span class="delimeter"> [</span><span class="upperident">Baz</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">,</span><span class="upperident"> Foo</span><span class="delimeter">]</span><span class="op"> !=</span><span class="upperident"> StartsWithFoo</span><span class="comment"> 
+            _</span><span class="kw"> -&gt;</span><span class="upperident"> Other</span><span class="delimeter">
+
+    (</span><span class="lowerident">patternMatch</span><span class="delimeter"> [</span><span class="upperident">Foo</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">,</span><span class="upperident"> Baz</span><span class="delimeter">]</span><span class="op"> ==</span><span class="upperident"> StartsWithFoo</span><span class="delimeter">)</span><span class="op">
+    &amp;&amp;</span><span class="delimeter"> (</span><span class="lowerident">patternMatch</span><span class="delimeter"> [</span><span class="upperident">Baz</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">,</span><span class="upperident"> Foo</span><span class="delimeter">]</span><span class="op"> !=</span><span class="upperident"> StartsWithFoo</span><span class="delimeter">)</span><span class="comment">
 
 # Pattern match on a list that ends with a Foo tag</span><span class="kw">
-expect</span><span class="lowerident"> 
+expect</span><span class="lowerident">
     patternMatch</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">input</span><span class="kw"> -&gt;</span><span class="kw">
-        when</span><span class="lowerident"> input</span><span class="kw"> is</span><span class="delimeter"> 
-            [</span><span class="delimeter">.</span><span class="delimeter">.</span><span class="delimeter">,</span><span class="upperident"> Foo</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="upperident"> StartsWithFoo</span><span class="lowerident">
-            _</span><span class="kw"> -&gt;</span><span class="upperident"> Other</span><span class="lowerident">
-    
-    patternMatch</span><span class="delimeter"> [</span><span class="upperident">Baz</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">,</span><span class="upperident"> Foo</span><span class="delimeter">]</span><span class="op"> ==</span><span class="upperident"> StartsWithFoo</span><span class="op"> &amp;&amp;</span><span class="lowerident">
-    patternMatch</span><span class="delimeter"> [</span><span class="upperident">Foo</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">,</span><span class="upperident"> Baz</span><span class="delimeter">]</span><span class="op"> !=</span><span class="upperident"> StartsWithFoo</span><span class="comment"> 
+        when</span><span class="lowerident"> input</span><span class="kw"> is</span><span class="delimeter">
+            [</span><span class="delimeter">.</span><span class="delimeter">.</span><span class="delimeter">,</span><span class="upperident"> Foo</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="upperident"> EndWithFoo</span><span class="lowerident">
+            _</span><span class="kw"> -&gt;</span><span class="upperident"> Other</span><span class="delimeter">
+
+    (</span><span class="lowerident">patternMatch</span><span class="delimeter"> [</span><span class="upperident">Baz</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">,</span><span class="upperident"> Foo</span><span class="delimeter">]</span><span class="op"> ==</span><span class="upperident"> EndWithFoo</span><span class="delimeter">)</span><span class="op">
+    &amp;&amp;</span><span class="delimeter"> (</span><span class="lowerident">patternMatch</span><span class="delimeter"> [</span><span class="upperident">Foo</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">,</span><span class="upperident"> Baz</span><span class="delimeter">]</span><span class="op"> !=</span><span class="upperident"> EndWithFoo</span><span class="delimeter">)</span><span class="comment">
 
 # Pattern match on a list that starts with a Foo tag followed by a Bar tag</span><span class="kw">
-expect</span><span class="lowerident"> 
+expect</span><span class="lowerident">
     patternMatch</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">input</span><span class="kw"> -&gt;</span><span class="kw">
-        when</span><span class="lowerident"> input</span><span class="kw"> is</span><span class="delimeter"> 
+        when</span><span class="lowerident"> input</span><span class="kw"> is</span><span class="delimeter">
             [</span><span class="upperident">Foo</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">,</span><span class="delimeter"> .</span><span class="delimeter">.</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="upperident"> FooBar</span><span class="lowerident">
-            _</span><span class="kw"> -&gt;</span><span class="upperident"> Other</span><span class="lowerident">
-    
-    patternMatch</span><span class="delimeter"> [</span><span class="upperident">Foo</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">]</span><span class="op"> ==</span><span class="upperident"> FooBar</span><span class="op"> &amp;&amp;</span><span class="lowerident"> 
-    patternMatch</span><span class="delimeter"> [</span><span class="upperident">Bar</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">,</span><span class="upperident"> Foo</span><span class="delimeter">]</span><span class="op"> !=</span><span class="upperident"> FooBar</span><span class="comment"> 
+            _</span><span class="kw"> -&gt;</span><span class="upperident"> Other</span><span class="delimeter">
+
+    (</span><span class="lowerident">patternMatch</span><span class="delimeter"> [</span><span class="upperident">Foo</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">]</span><span class="op"> ==</span><span class="upperident"> FooBar</span><span class="delimeter">)</span><span class="op">
+    &amp;&amp;</span><span class="delimeter"> (</span><span class="lowerident">patternMatch</span><span class="delimeter"> [</span><span class="upperident">Bar</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">,</span><span class="upperident"> Foo</span><span class="delimeter">]</span><span class="op"> !=</span><span class="upperident"> FooBar</span><span class="delimeter">)</span><span class="comment">
 
 # Pattern match on a list with these exact elements: Foo, Bar, and then Baz</span><span class="kw">
-expect</span><span class="lowerident"> 
+expect</span><span class="lowerident">
     patternMatch</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">input</span><span class="kw"> -&gt;</span><span class="kw">
-        when</span><span class="lowerident"> input</span><span class="kw"> is</span><span class="delimeter"> 
+        when</span><span class="lowerident"> input</span><span class="kw"> is</span><span class="delimeter">
             [</span><span class="upperident">Foo</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">,</span><span class="upperident"> Baz</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="upperident"> Bingo</span><span class="lowerident">
-            _</span><span class="kw"> -&gt;</span><span class="upperident"> Other</span><span class="lowerident">
-    
-    patternMatch</span><span class="delimeter"> [</span><span class="upperident">Foo</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">,</span><span class="upperident"> Baz</span><span class="delimeter">]</span><span class="op"> ==</span><span class="upperident"> Bingo</span><span class="op"> &amp;&amp;</span><span class="lowerident"> 
-    patternMatch</span><span class="delimeter"> [</span><span class="upperident">Foo</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">]</span><span class="op"> !=</span><span class="upperident"> Bingo</span><span class="op"> &amp;&amp;</span><span class="lowerident">
-    patternMatch</span><span class="delimeter"> [</span><span class="upperident">Foo</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">,</span><span class="upperident"> Baz</span><span class="delimeter">,</span><span class="upperident"> Barry</span><span class="delimeter">]</span><span class="op"> !=</span><span class="upperident"> Bingo</span><span class="comment">
+            _</span><span class="kw"> -&gt;</span><span class="upperident"> Other</span><span class="delimeter">
+
+    (</span><span class="lowerident">patternMatch</span><span class="delimeter"> [</span><span class="upperident">Foo</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">,</span><span class="upperident"> Baz</span><span class="delimeter">]</span><span class="op"> ==</span><span class="upperident"> Bingo</span><span class="delimeter">)</span><span class="op">
+    &amp;&amp;</span><span class="delimeter"> (</span><span class="lowerident">patternMatch</span><span class="delimeter"> [</span><span class="upperident">Foo</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">]</span><span class="op"> !=</span><span class="upperident"> Bingo</span><span class="delimeter">)</span><span class="op">
+    &amp;&amp;</span><span class="delimeter"> (</span><span class="lowerident">patternMatch</span><span class="delimeter"> [</span><span class="upperident">Foo</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">,</span><span class="upperident"> Baz</span><span class="delimeter">,</span><span class="upperident"> Barry</span><span class="delimeter">]</span><span class="op"> !=</span><span class="upperident"> Bingo</span><span class="delimeter">)</span><span class="comment">
 
 # Pattern match on a list with first element Foo, and then a second we name `a`</span><span class="kw">
-expect</span><span class="lowerident"> 
+expect</span><span class="lowerident">
     patternMatch</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">input</span><span class="kw"> -&gt;</span><span class="kw">
-        when</span><span class="lowerident"> input</span><span class="kw"> is</span><span class="delimeter"> 
-            [</span><span class="upperident">Foo</span><span class="delimeter">,</span><span class="lowerident"> a</span><span class="delimeter">,</span><span class="delimeter"> .</span><span class="delimeter">.</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="kw"> 
-                if</span><span class="lowerident"> a</span><span class="op"> ==</span><span class="upperident"> Bar</span><span class="kw"> then</span><span class="upperident"> 
+        when</span><span class="lowerident"> input</span><span class="kw"> is</span><span class="delimeter">
+            [</span><span class="upperident">Foo</span><span class="delimeter">,</span><span class="lowerident"> a</span><span class="delimeter">,</span><span class="delimeter"> .</span><span class="delimeter">.</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="kw">
+                if</span><span class="lowerident"> a</span><span class="op"> ==</span><span class="upperident"> Bar</span><span class="kw"> then</span><span class="upperident">
                     FooBar</span><span class="kw">
-                else</span><span class="upperident"> 
+                else</span><span class="upperident">
                     Other</span><span class="lowerident">
+
             _</span><span class="kw"> -&gt;</span><span class="upperident"> Other</span><span class="lowerident">
-    
+
     patternMatch</span><span class="delimeter"> [</span><span class="upperident">Foo</span><span class="delimeter">,</span><span class="upperident"> Bar</span><span class="delimeter">]</span><span class="op"> ==</span><span class="upperident"> FooBar</span></samp></pre></main><footer><p>Made by people who like to make nice things.</p><p> © 2023</p></footer></body></html>
