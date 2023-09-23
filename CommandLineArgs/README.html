@@ -1,0 +1,81 @@
+<!DOCTYPE html><html  lang="en"><head><title>Roc Examples</title><meta  charset="utf-8"></meta><meta  name="viewport" content="width=device-width"></meta><link  rel="icon" href="/favicon.svg"></link><link  rel="stylesheet" href="/styles.css"></link><script  type="text/javascript" src="/copy-btn.js" defer=""></script></head><body><div  class="top-header-extension"></div><header  class="top-header"><div  class="pkg-and-logo"><a  class="logo" href="/"><svg  viewBox="0 -6 51 58" fill="none" xmlns="http://www.w3.org/2000/svg" aria-labelledby="logo-link" role="img"><title  id="logo-link">Return to Roc packages</title><polygon  role="presentation" points="0,0 23.8834,3.21052 37.2438,19.0101 45.9665,16.6324 50.5,22 45,22 44.0315,26.3689 26.4673,39.3424 27.4527,45.2132 17.655,53 23.6751,22.7086"></polygon></svg></a><h1  class="pkg-full-name"><a  href="/index.html">Examples</a></h1></div><div  class="top-header-triangle"></div></header><p  class="feedback">we 💜 feedback: <a  href="https://github.com/roc-lang/examples">GitHub</a> | <a  href="https://roc.zulipchat.com/">Group Chat</a></p><main><h1>Command Line Args</h1>
+<p>This example shows how to use command line arguments to read a file using the <a href="https://github.com/roc-lang/basic-cli">basic-cli platform</a>.</p>
+<h2>Output</h2>
+<pre><samp>% roc run examples/CommandLineArgs/main.roc -- examples/CommandLineArgs/input.txt
+file content: 42
+</pre></samp>
+<h2>Code</h2>
+<pre><samp><span class="comment"># Run with `roc ./examples/CommandLineArgs/main.roc -- examples/CommandLineArgs/input.txt`</span><span class="kw">
+app</span><span class="literal"> "command-line-args"</span><span class="kw">
+    packages</span><span class="delimeter"> {</span><span class="lowerident">
+        pf</span><span class="kw">:</span><span class="literal"> "https://github.com/roc-lang/basic-cli/releases/download/0.5.0/Cufzl36_SnJ4QbOoEmiJ5dIpUxBvdB3NEySvuH82Wio.tar.br"</span><span class="delimeter">,</span><span class="delimeter">
+    }</span><span class="kw">
+    imports</span><span class="delimeter"> [</span><span class="lowerident">
+        pf</span><span class="delimeter">.</span><span class="upperident">Stdout</span><span class="delimeter">,</span><span class="lowerident">
+        pf</span><span class="delimeter">.</span><span class="upperident">Stderr</span><span class="delimeter">,</span><span class="lowerident">
+        pf</span><span class="delimeter">.</span><span class="upperident">File</span><span class="delimeter">,</span><span class="lowerident">
+        pf</span><span class="delimeter">.</span><span class="upperident">Path</span><span class="delimeter">,</span><span class="lowerident">
+        pf</span><span class="delimeter">.</span><span class="upperident">Task</span><span class="delimeter">,</span><span class="lowerident">
+        pf</span><span class="delimeter">.</span><span class="upperident">Arg</span><span class="delimeter">,</span><span class="delimeter">
+    ]</span><span class="kw">
+    provides</span><span class="delimeter"> [</span><span class="lowerident">main</span><span class="delimeter">]</span><span class="kw"> to</span><span class="lowerident"> pf</span><span class="lowerident">
+
+main</span><span class="kw"> :</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="upperident">Task</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="upperident"> I32</span><span class="lowerident">
+main</span><span class="kw"> =</span><span class="lowerident">
+    finalTask</span><span class="kw"> =</span><span class="comment">
+        # try to read the first command line argument</span><span class="lowerident">
+        pathArg</span><span class="kw"> &lt;-</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">await</span><span class="lowerident"> readFirstArgT</span><span class="lowerident">
+
+        readFileToStr</span><span class="delimeter"> (</span><span class="upperident">Path</span><span class="delimeter">.</span><span class="lowerident">fromStr</span><span class="lowerident"> pathArg</span><span class="delimeter">)</span><span class="lowerident">
+
+    finalResult</span><span class="kw"> &lt;-</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">attempt</span><span class="lowerident"> finalTask</span><span class="kw">
+
+    when</span><span class="lowerident"> finalResult</span><span class="kw"> is</span><span class="upperident">
+        Err</span><span class="upperident"> ZeroArgsGiven</span><span class="kw"> -&gt;</span><span class="delimeter">
+            {</span><span class="delimeter">}</span><span class="kw"> &lt;-</span><span class="upperident"> Stderr</span><span class="delimeter">.</span><span class="lowerident">line</span><span class="literal"> "Error ZeroArgsGiven:\n\tI expected one argument, but I got none.\n\tRun the app like this: `roc command-line-args.roc -- path/to/input.txt`"</span><span class="kw"> |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">await</span><span class="upperident">
+
+            Task</span><span class="delimeter">.</span><span class="lowerident">err</span><span class="literal"> 1</span><span class="comment"> # 1 is an exit code to indicate failure</span><span class="upperident">
+
+        Err</span><span class="delimeter"> (</span><span class="upperident">ReadFileErr</span><span class="lowerident"> errMsg</span><span class="delimeter">)</span><span class="kw"> -&gt;</span><span class="lowerident">
+            indentedErrMsg</span><span class="kw"> =</span><span class="lowerident"> indentLines</span><span class="lowerident"> errMsg</span><span class="delimeter">
+            {</span><span class="delimeter">}</span><span class="kw"> &lt;-</span><span class="upperident"> Stderr</span><span class="delimeter">.</span><span class="lowerident">line</span><span class="literal"> "Error ReadFileErr:\n\(indentedErrMsg)"</span><span class="kw"> |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">await</span><span class="upperident">
+
+            Task</span><span class="delimeter">.</span><span class="lowerident">err</span><span class="literal"> 1</span><span class="comment"> # 1 is an exit code to indicate failure</span><span class="upperident">
+
+        Ok</span><span class="lowerident"> fileContentStr</span><span class="kw"> -&gt;</span><span class="upperident">
+            Stdout</span><span class="delimeter">.</span><span class="lowerident">line</span><span class="literal"> "file content: \(fileContentStr)"</span><span class="comment">
+
+# Task to read the first CLI arg (= Str)</span><span class="lowerident">
+readFirstArgT</span><span class="kw"> :</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="upperident">Task</span><span class="upperident"> Str</span><span class="delimeter"> [</span><span class="upperident">ZeroArgsGiven</span><span class="delimeter">]</span><span class="lowerident">_</span><span class="lowerident">
+readFirstArgT</span><span class="kw"> =</span><span class="comment">
+    # read all command line arguments</span><span class="lowerident">
+    args</span><span class="kw"> &lt;-</span><span class="upperident"> Arg</span><span class="delimeter">.</span><span class="lowerident">list</span><span class="kw"> |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">await</span><span class="comment">
+
+    # get the second argument, the first is the executable's path</span><span class="upperident">
+    List</span><span class="delimeter">.</span><span class="lowerident">get</span><span class="lowerident"> args</span><span class="literal"> 1</span><span class="kw"> |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">mapErr</span><span class="delimeter"> (</span><span class="kw">\</span><span class="lowerident">_</span><span class="kw"> -&gt;</span><span class="upperident"> ZeroArgsGiven</span><span class="delimeter">)</span><span class="kw"> |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">fromResult</span><span class="comment">
+
+# reads a file and puts all lines in one Str</span><span class="lowerident">
+readFileToStr</span><span class="kw"> :</span><span class="upperident"> Path</span><span class="delimeter">.</span><span class="upperident">Path</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="upperident">Task</span><span class="upperident"> Str</span><span class="delimeter"> [</span><span class="upperident">ReadFileErr</span><span class="upperident"> Str</span><span class="delimeter">]</span><span class="lowerident">_</span><span class="lowerident">
+readFileToStr</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">path</span><span class="kw"> -&gt;</span><span class="lowerident">
+    path</span><span class="kw">
+    |&gt;</span><span class="upperident"> File</span><span class="delimeter">.</span><span class="lowerident">readUtf8</span><span class="comment">
+    # Make a nice error message </span><span class="kw">
+    |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">mapErr</span><span class="delimeter">
+        (</span><span class="kw">\</span><span class="lowerident">fileReadErr</span><span class="kw"> -&gt;</span><span class="lowerident">
+            pathStr</span><span class="kw"> =</span><span class="upperident"> Path</span><span class="delimeter">.</span><span class="lowerident">display</span><span class="lowerident"> path</span><span class="comment">
+            # TODO use FileReadErrToErrMsg when it is implemented: https://github.com/roc-lang/basic-cli/issues/44</span><span class="kw">
+            when</span><span class="lowerident"> fileReadErr</span><span class="kw"> is</span><span class="upperident">
+                FileReadErr</span><span class="lowerident"> _</span><span class="lowerident"> readErr</span><span class="kw"> -&gt;</span><span class="lowerident">
+                    readErrStr</span><span class="kw"> =</span><span class="upperident"> File</span><span class="delimeter">.</span><span class="lowerident">readErrToStr</span><span class="lowerident"> readErr</span><span class="upperident">
+                    ReadFileErr</span><span class="literal"> "Failed to read file at:\n\t\(pathStr)\n\(readErrStr)"</span><span class="upperident">
+
+                FileReadUtf8Err</span><span class="lowerident"> _</span><span class="lowerident"> _</span><span class="kw"> -&gt;</span><span class="upperident">
+                    ReadFileErr</span><span class="literal"> "I could not read the file:\n\t\(pathStr)\nIt contains charcaters that are not valid UTF-8:\n\t- Check if the file is encoded using a different format and convert it to UTF-8.\n\t- Check if the file is corrupted.\n\t- Find the characters that are not valid UTF-8 and fix or remove them."</span><span class="delimeter">
+        )</span><span class="comment">
+
+# indent all lines in a Str with a single tab</span><span class="lowerident">
+indentLines</span><span class="kw">:</span><span class="upperident"> Str</span><span class="kw"> -&gt;</span><span class="upperident"> Str</span><span class="lowerident">
+indentLines</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">inputStr</span><span class="kw"> -&gt;</span><span class="upperident">
+    Str</span><span class="delimeter">.</span><span class="lowerident">split</span><span class="lowerident"> inputStr</span><span class="literal"> "\n"</span><span class="kw">
+    |&gt;</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="delimeter"> (</span><span class="kw">\</span><span class="lowerident">line</span><span class="kw"> -&gt;</span><span class="upperident"> Str</span><span class="delimeter">.</span><span class="lowerident">concat</span><span class="literal"> "\t"</span><span class="lowerident"> line</span><span class="delimeter">)</span><span class="kw">
+    |&gt;</span><span class="upperident"> Str</span><span class="delimeter">.</span><span class="lowerident">joinWith</span><span class="literal"> "\n"</span></samp></pre></main><footer><p>Made by people who like to make nice things © 2023</p></footer></body></html>
