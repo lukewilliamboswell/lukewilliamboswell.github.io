@@ -1,0 +1,86 @@
+<!DOCTYPE html><html  lang="en"><head><title>Roc Examples</title><meta  charset="utf-8"></meta><meta  name="viewport" content="width=device-width"></meta><link  rel="icon" href="/favicon.svg"></link><link  rel="stylesheet" href="/styles.css"></link><script  type="text/javascript" src="/copy-btn.js" defer=""></script></head><body><div  class="top-header-extension"></div><header  class="top-header"><div  class="pkg-and-logo"><a  class="logo" href="/"><svg  viewBox="0 -6 51 58" fill="none" xmlns="http://www.w3.org/2000/svg" aria-labelledby="logo-link" role="img"><title  id="logo-link">Return to Roc packages</title><polygon  role="presentation" points="0,0 23.8834,3.21052 37.2438,19.0101 45.9665,16.6324 50.5,22 45,22 44.0315,26.3689 26.4673,39.3424 27.4527,45.2132 17.655,53 23.6751,22.7086"></polygon></svg></a><h1  class="pkg-full-name"><a  href="/index.html">Examples</a></h1></div><div  class="top-header-triangle"></div></header><p  class="feedback">we 💜 feedback: <a  href="https://github.com/roc-lang/examples">GitHub</a> | <a  href="https://roc.zulipchat.com/">Group Chat</a></p><main><h1>Record Builder</h1>
+<p>This example demonstrates the Record Builder pattern in Roc. This pattern leverages the functional programming concept of applicative functors, to provide a flexible method for constructing complex types.</p>
+<h2>The Basics</h2>
+<p>Let's assume we want to develop a module that supplies a type-safe yet versatile method for users to safely obtain sequential IDs. The record builder pattern can be beneficial in this scenario.</p>
+<ol>
+<li><strong>Opaque Type</strong> We need an opaque type that will accumulate our state:</li>
+</ol>
+<pre><samp><span class="upperident">Count</span><span class="lowerident"> a</span><span class="kw"> :=</span><span class="delimeter"> (</span><span class="upperident">U32</span><span class="delimeter">,</span><span class="lowerident"> a</span><span class="delimeter">)</span></samp></pre>
+<p>This type takes a type variable <code>a</code>, and holds a tuple of a <code>U32</code> and an <code>a</code>. Here, U32 will maintain our counter's value, while a houses the function to progress our builder pattern.</p>
+<ol start="2">
+<li><strong>End Goal</strong> It's useful to visualize our desired result. The record builder pattern we're aiming for looks like:</li>
+</ol>
+<pre><samp><span class="kw">expect</span><span class="delimeter">
+    {</span><span class="lowerident"> foo</span><span class="delimeter">,</span><span class="lowerident"> bar</span><span class="delimeter">,</span><span class="lowerident"> baz</span><span class="delimeter"> }</span><span class="kw"> =</span><span class="lowerident"> 
+        from</span><span class="delimeter"> {</span><span class="lowerident">
+            foo</span><span class="kw">:</span><span class="kw"> &lt;-</span><span class="lowerident"> inc</span><span class="delimeter">,</span><span class="lowerident">
+            bar</span><span class="kw">:</span><span class="kw"> &lt;-</span><span class="lowerident"> inc</span><span class="delimeter">,</span><span class="lowerident">
+            baz</span><span class="kw">:</span><span class="kw"> &lt;-</span><span class="lowerident"> inc</span><span class="delimeter">,</span><span class="delimeter">
+        }</span><span class="kw"> |&gt;</span><span class="lowerident"> done</span><span class="lowerident">
+
+    foo</span><span class="op"> ==</span><span class="literal"> 1</span><span class="op"> &amp;&amp;</span><span class="lowerident"> bar</span><span class="op"> ==</span><span class="literal"> 2</span><span class="op"> &amp;&amp;</span><span class="lowerident"> baz</span><span class="op"> ==</span><span class="literal"> 3</span></samp></pre>
+<p>This generates a record with fields foo, bar, and baz, all possessing sequential U32 IDs. Note the slight deviation from the conventional record syntax, using a <code>: <-</code> instead of <code>:</code>, this is the record builder pattern syntax.</p>
+<ol start="3">
+<li><strong>Under the Hood</strong> The record builder pattern is syntax suger which converts the preceding into:</li>
+</ol>
+<pre><samp><span class="kw">expect</span><span class="delimeter">
+    {</span><span class="lowerident"> foo</span><span class="delimeter">,</span><span class="lowerident"> bar</span><span class="delimeter">,</span><span class="lowerident"> baz</span><span class="delimeter"> }</span><span class="kw"> =</span><span class="lowerident">
+        from</span><span class="delimeter"> (</span><span class="kw">\</span><span class="lowerident">a</span><span class="kw"> -&gt;</span><span class="kw"> \</span><span class="lowerident">b</span><span class="kw"> -&gt;</span><span class="kw"> \</span><span class="lowerident">c</span><span class="kw"> -&gt;</span><span class="delimeter"> {</span><span class="lowerident"> foo</span><span class="kw">:</span><span class="lowerident">a</span><span class="delimeter">,</span><span class="lowerident"> bar</span><span class="kw">:</span><span class="lowerident">b</span><span class="delimeter">,</span><span class="lowerident"> baz</span><span class="kw">:</span><span class="lowerident">c</span><span class="delimeter"> }</span><span class="delimeter">)</span><span class="kw">
+        |&gt;</span><span class="lowerident"> inc</span><span class="kw">
+        |&gt;</span><span class="lowerident"> inc</span><span class="kw">
+        |&gt;</span><span class="lowerident"> inc</span><span class="kw">
+        |&gt;</span><span class="lowerident"> done</span><span class="lowerident">
+
+    foo</span><span class="op"> ==</span><span class="literal"> 1</span><span class="op"> &amp;&amp;</span><span class="lowerident"> bar</span><span class="op"> ==</span><span class="literal"> 2</span><span class="op"> &amp;&amp;</span><span class="lowerident"> baz</span><span class="op"> ==</span><span class="literal"> 3</span></samp></pre>
+<p>To make this work, we will define the functions <code>from</code> <code>inc</code> and <code>done</code>.</p>
+<ol start="4">
+<li><strong>Initial Value</strong> Let's start with <code>from</code>:</li>
+</ol>
+<pre><samp><span class="lowerident">from</span><span class="kw"> :</span><span class="lowerident"> a</span><span class="kw"> -&gt;</span><span class="upperident"> Count</span><span class="lowerident"> a</span><span class="lowerident">
+from</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">advance</span><span class="kw"> -&gt;</span><span class="kw">
+    @</span><span class="upperident">Count</span><span class="delimeter"> (</span><span class="literal">0</span><span class="delimeter">,</span><span class="lowerident"> advance</span><span class="delimeter">)</span></samp></pre>
+<p><code>from</code> initiates the <code>Count a</code> value with <code>U32</code> set to <code>0</code> and stores the advance function, which is wrapped by <code>@Count</code> into our opaque type.</p>
+<blockquote>
+<p>Note: This usage of an opaque type ensures that, outside this module, the counter's value remains concealed (unless we purposely expose it through another function).</p>
+</blockquote>
+<ol start="5">
+<li><strong>Applicative</strong> <code>inc</code> is defined it as:</li>
+</ol>
+<pre><samp><span class="lowerident">inc</span><span class="kw"> :</span><span class="upperident"> Count</span><span class="delimeter"> (</span><span class="upperident">U32</span><span class="kw"> -&gt;</span><span class="lowerident"> a</span><span class="delimeter">)</span><span class="kw"> -&gt;</span><span class="upperident"> Count</span><span class="lowerident"> a</span><span class="lowerident">
+inc</span><span class="kw"> =</span><span class="kw"> \</span><span class="kw">@</span><span class="upperident">Count</span><span class="delimeter"> (</span><span class="lowerident">curr</span><span class="delimeter">,</span><span class="lowerident"> advance</span><span class="delimeter">)</span><span class="kw"> -&gt;</span><span class="lowerident">
+    new</span><span class="kw"> =</span><span class="lowerident"> curr</span><span class="op"> +</span><span class="literal"> 1</span><span class="kw">
+
+    @</span><span class="upperident">Count</span><span class="delimeter"> (</span><span class="lowerident">new</span><span class="delimeter">,</span><span class="lowerident"> advance</span><span class="lowerident"> new</span><span class="delimeter">)</span></samp></pre>
+<p>Looking at the type signature, we see that it takes a <code>Count a</code> value and applies a <code>U32</code> value to it's advance function.</p>
+<p><code>inc</code> unwraps the argument <code>@Count (curr, advance)</code>; calculates a new state value <code>new = curr + 1</code>; applies this new value to the provided advance function <code>@Count (new, advance new)</code>; returning a new <code>Count a</code> value.</p>
+<p>If you haven't seen this pattern before, it can be difficult to see how this works. Let's break it down and follow the type of <code>a</code> at each step in our builder pattern.</p>
+<pre><samp><span class="lowerident">from</span><span class="delimeter"> (</span><span class="kw">\</span><span class="lowerident">a</span><span class="kw"> -&gt;</span><span class="kw"> \</span><span class="lowerident">b</span><span class="kw"> -&gt;</span><span class="kw"> \</span><span class="lowerident">c</span><span class="kw"> -&gt;</span><span class="delimeter"> {</span><span class="lowerident"> foo</span><span class="kw">:</span><span class="lowerident">a</span><span class="delimeter">,</span><span class="lowerident"> bar</span><span class="kw">:</span><span class="lowerident">b</span><span class="delimeter">,</span><span class="lowerident"> baz</span><span class="kw">:</span><span class="lowerident">c</span><span class="delimeter"> }</span><span class="delimeter">)</span><span class="comment"> # Count (U32 -&gt; U32 -&gt; U32 -&gt; { foo: U32, bar: U32, baz: U32  })</span><span class="kw">
+|&gt;</span><span class="lowerident"> inc</span><span class="comment">                                           # Count (U32 -&gt; U32 -&gt; { foo: U32, bar: U32, baz: U32 })</span><span class="kw">
+|&gt;</span><span class="lowerident"> inc</span><span class="comment">                                           # Count (U32 -&gt; { foo: U32, bar: U32, baz: U32 })</span><span class="kw">
+|&gt;</span><span class="lowerident"> inc</span><span class="comment">                                           # Count ({ foo: U32, bar: U32, baz: U32 })</span><span class="kw">
+|&gt;</span><span class="lowerident"> done</span></samp></pre>
+<p>Above you can see the type of <code>a</code> is advanced at each step by applying a <code>U32</code> value to the function. This is also known as an applicative pipeline, and can be a flexible way to build up complex types.</p>
+<ol start="6">
+<li><strong>Unwrap</strong> Finally, <code>done</code> unwraps the <code>Count a</code> value and return our record. </li>
+</ol>
+<pre><samp><span class="lowerident">done</span><span class="kw"> :</span><span class="upperident"> Count</span><span class="lowerident"> a</span><span class="kw"> -&gt;</span><span class="lowerident"> a</span><span class="lowerident">
+done</span><span class="kw"> =</span><span class="kw"> \</span><span class="kw">@</span><span class="upperident">Count</span><span class="delimeter"> (</span><span class="lowerident">_</span><span class="delimeter">,</span><span class="lowerident"> final</span><span class="delimeter">)</span><span class="kw"> -&gt;</span><span class="lowerident"> 
+    final</span></samp></pre>
+<p>In our case, we don't need the <code>U32</code> state of our tuple <code>@Count (_, final)</code> and just return the record we have built.</p>
+<h2>Basic Counter</h2>
+<p>Code for the above example is available in <code>BasicCounter.roc</code> which you can run using the following.</p>
+<pre><samp><span class="source shell bash"><span class="meta function-call shell"><span class="variable function shell"><span class="meta group expansion job shell"><span class="punctuation definition variable job shell">%</span></span></span></span><span class="meta function-call arguments shell"> roc test BasicCounter.roc</span>
+
+<span class="meta function-call shell"><span class="variable function shell">0</span></span><span class="meta function-call arguments shell"> failed and 1 passed in 698 ms.</span>
+</span></pre></samp>
+<h2>Advanced Counter</h2>
+<p>For a more advanced example, the <code>AdvancedCounter.roc</code> example demonstrates using the record builder pattern by passing an initial value for the counter, and also taking an argument to increment the counter by.</p>
+<pre><samp><span class="kw">expect</span><span class="delimeter">
+    {</span><span class="lowerident"> foo</span><span class="delimeter">,</span><span class="lowerident"> bar</span><span class="delimeter">,</span><span class="lowerident"> baz</span><span class="delimeter"> }</span><span class="kw"> =</span><span class="lowerident">
+        from</span><span class="literal"> 0</span><span class="delimeter"> {</span><span class="lowerident">
+            foo</span><span class="kw">:</span><span class="kw"> &lt;-</span><span class="lowerident"> incBy</span><span class="literal"> 2</span><span class="delimeter">,</span><span class="lowerident">
+            bar</span><span class="kw">:</span><span class="kw"> &lt;-</span><span class="lowerident"> incBy</span><span class="literal"> 3</span><span class="delimeter">,</span><span class="lowerident">
+            baz</span><span class="kw">:</span><span class="kw"> &lt;-</span><span class="lowerident"> incBy</span><span class="literal"> 4</span><span class="delimeter">,</span><span class="delimeter">
+        }</span><span class="kw"> |&gt;</span><span class="lowerident"> done</span><span class="lowerident">
+
+    foo</span><span class="op"> ==</span><span class="literal"> 2</span><span class="op"> &amp;&amp;</span><span class="lowerident"> bar</span><span class="op"> ==</span><span class="literal"> 5</span><span class="op"> &amp;&amp;</span><span class="lowerident"> baz</span><span class="op"> ==</span><span class="literal"> 9</span></samp></pre></main><footer><p>Made by people who like to make nice things © 2023</p></footer></body></html>

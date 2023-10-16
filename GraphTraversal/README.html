@@ -23,7 +23,7 @@ interface</span><span class="upperident"> Graph</span><span class="kw">
 
 ## Graph type representing a graph as a dictionary of adjacency lists</span><span class="comment">
 ## where each key is a vertex and each value is a list of its adjacent vertices.</span><span class="upperident">
-Graph</span><span class="lowerident"> a</span><span class="kw"> :=</span><span class="upperident"> Dict</span><span class="lowerident"> a</span><span class="delimeter"> (</span><span class="upperident">List</span><span class="lowerident"> a</span><span class="delimeter">)</span><span class="kw"> where</span><span class="lowerident"> a</span><span class="lowerident"> implements</span><span class="upperident"> Eq</span><span class="comment">
+Graph</span><span class="lowerident"> a</span><span class="kw"> :=</span><span class="upperident"> Dict</span><span class="lowerident"> a</span><span class="delimeter"> (</span><span class="upperident">List</span><span class="lowerident"> a</span><span class="delimeter">)</span><span class="lowerident"> where</span><span class="lowerident"> a</span><span class="lowerident"> implements</span><span class="upperident"> Eq</span><span class="comment">
 
 ## Create a Graph from an adjacency list.</span><span class="lowerident">
 fromList</span><span class="kw"> :</span><span class="upperident"> List</span><span class="delimeter"> (</span><span class="lowerident">a</span><span class="delimeter">,</span><span class="upperident"> List</span><span class="lowerident"> a</span><span class="delimeter">)</span><span class="kw"> -&gt;</span><span class="upperident"> Graph</span><span class="lowerident"> a</span><span class="lowerident">
