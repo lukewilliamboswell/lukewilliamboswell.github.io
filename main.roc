@@ -1,4 +1,4 @@
-app "roc-website"
+app "website"
     packages { pf: "../roc/examples/static-site-gen/platform/main.roc" }
     imports [
         pf.Html.{ Node, html, head, body, footer, main, text, link, meta },
@@ -31,7 +31,7 @@ view : Str, Str -> Html.Node
 view = \page, htmlContent ->
     mainBody = [text htmlContent]
 
-    bodyAttrs = [id "homepage-main"]
+    bodyAttrs = [id "index-page"]
 
     html [lang "en", class "no-js"] [
         head [] [
