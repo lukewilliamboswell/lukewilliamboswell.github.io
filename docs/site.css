@@ -65,6 +65,13 @@ main {
     box-sizing: border-box;
 }
 
+.demo-img {
+    max-width: 80%;
+    display: block;
+    margin: 1em auto;
+    box-shadow: 0 0 1em var(--gray);
+}
+
 a {
     color: var(--violet);
     text-decoration: none;
@@ -91,7 +98,7 @@ code {
     color: var(--code-color);
     background-color: var(--code-bg);
     display: inline-block;
-    font-size: 12px;
+    font-size: 14px;
 }
 
 p code {

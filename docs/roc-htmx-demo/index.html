@@ -2,7 +2,8 @@
 <h1>Fullstack Roc + htmx—an early exploration 🔍📚🔭</h1>
 <p><time class="post-date" datetime="2023-12-14">14 Dec 2023</time></p>
 <p>With this exploration, I aimed to expand on one of the example apps for the <a href="https://github.com/roc-lang/basic-webserver">roc-lang/basic-webserver</a> platform, and see if I could build a full-stack web application using the <a href="https://htmx.org/">htmx</a> library.</p>
-<p>I hope this post encourages other people to build cool things.</p>
+<p>I'm sharing code that isn't polished and continues to evolve as I learn more about Roc and htmx. However, I want to share what I have, flaws and all, so that others can benefit from this exploration.</p>
+<p>I hope this encourages people to build cool things. </p>
 <h2>Goals</h2>
 <ul>
 <li>Explore Roc and htmx for developing web applications</li>
@@ -16,12 +17,15 @@
 <h3>Future Ideas</h3>
 <ul>
 <li>Modify to use PostgreSQL so that I can use this to help test <a href="https://github.com/agu-z/roc-pg">agu-z/roc-pg</a></li>
-<li>Modify to help test the <a href="https://github.com/tweedegolf/nea">tweedegolf/nea</a></li>
+<li>Modify to help test <a href="https://github.com/tweedegolf/nea">tweedegolf/nea</a> which aims to be a high performance webserver platform</li>
 </ul>
+<h3>Demonstration</h3>
+<p>Below is an illustration of the current application. It shows navigating between different pages, managing a task list, and a logging into the application as a user. </p>
+<img class="demo-img" src="/example-rhtmx.gif" alt="screen capture of the application being used"/>
 <h2>Observations</h2>
 <h3>Session Middle-ware</h3>
-<p>I wanted to track users across http calls, so wrote the following which creates and sets a cookie with a <code>sessionId : U64</code> value. I keep track of these sessions in a sqlite table and can associate these with a user to simulate being &quot;logged in&quot;.</p>
-<p>I think the future <code>Stored</code> ability would enable you to cache the session values instead of using sqlite which would be a significant improvement.</p>
+<p>I wanted to track users across http calls, so wrote the following which creates and sets a cookie with a <code>sessionId : U64</code> value to be kept in the browser. I keep track of these sessions in a sqlite table and can associate these with a user to simulate being &quot;logged in&quot;.</p>
+<p>I think the future <code>Stored</code> ability would enable me to cache the session values in-memory instead of calling out to sqlite on every request which would be a significant improvement if I was expecting a lot of traffic. </p>
 <pre><samp><span class="lowerident">maybeSession</span><span class="kw"> &lt;-</span><span class="lowerident"> parseSessionId</span><span class="lowerident"> req</span><span class="kw"> |&gt;</span><span class="lowerident"> getSession</span><span class="lowerident"> dbPath</span><span class="kw"> |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">attempt</span><span class="kw">
 when</span><span class="lowerident"> maybeSession</span><span class="kw"> is</span><span class="comment">
 
@@ -48,9 +52,9 @@ when</span><span class="lowerident"> maybeSession</span><span class="kw"> is</sp
 
     # Handle any server errors</span><span class="upperident">
     Err</span><span class="lowerident"> err</span><span class="kw"> -&gt;</span><span class="lowerident"> handleErr</span><span class="lowerident"> err</span></samp></pre>
-<h3>Request Handler</h3>
-<p>For routing the request, I separated the url into segements and used pattern matching on a <code>List Str</code>. This worked well and was easy to follow. </p>
-<p>I'm not sure how well this scales for a larger application, but it was easy to get started and I was able to re-factor easily. For example, I added a <code>Session</code> argument so that the handlers would have that information available.</p>
+<h3>Request Handling</h3>
+<p>For routing the request, I used pattern matching on a tag for the method and <code>List Str</code> for url segments. This worked well and was easy to follow. </p>
+<p>I'm not sure how well this scales for a larger application, but it was simple to get started with, and easy to re-factor as I needed, e.g. when I included the <code>dbPath : Str</code> and <code>session : Session</code> arguments.</p>
 <pre><samp><span class="lowerident">handleReq</span><span class="kw"> :</span><span class="upperident"> Session</span><span class="delimeter">,</span><span class="upperident"> Str</span><span class="delimeter">,</span><span class="upperident"> Request</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="upperident"> Response</span><span class="lowerident"> _</span><span class="lowerident">
 handleReq</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">session</span><span class="delimeter">,</span><span class="lowerident"> dbPath</span><span class="delimeter">,</span><span class="lowerident"> req</span><span class="kw"> -&gt;</span><span class="kw">
     when</span><span class="delimeter"> (</span><span class="lowerident">req</span><span class="delimeter">.</span><span class="lowerident">method</span><span class="delimeter">,</span><span class="lowerident"> req</span><span class="delimeter">.</span><span class="lowerident">url</span><span class="kw"> |&gt;</span><span class="upperident"> Url</span><span class="delimeter">.</span><span class="lowerident">fromStr</span><span class="kw"> |&gt;</span><span class="lowerident"> urlSegments</span><span class="delimeter">)</span><span class="kw"> is</span><span class="delimeter">
@@ -84,8 +88,8 @@ handleReq</span><span class="kw"> =</span><span class="kw"> \</span><span class=
 
         # ... etc</span></samp></pre>
 <h3>Error Handler</h3>
-<p>For handling errors from various handlers I chose to use a single <code>handleErr</code> function to capture and unhandled errors and print these to stderr, and return an http server error to the browser. I found this to be very useful for quickly identifying edge cases and was very easy to manage. </p>
-<p>Various tasks such as <code>getAppTasks</code> would call out to sqlite and I wrapped the errors with custom tags such as <code>SqliteErrorGetTask</code> or <code>UnableToDecodeTask</code> which made it much easier to identify where the error may have originated from.</p>
+<p>For handling errors I used a single <code>handleErr</code> function to capture any unhandled errors. This task prints an error message to stderr, and responds with a server error. </p>
+<p>I found this to be useful for quickly identifying edge cases and as I contiuously refactored various implementation and function signatures. </p>
 <pre><samp><span class="lowerident">handleErr</span><span class="kw"> :</span><span class="lowerident"> _</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="upperident"> Response</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="lowerident">_</span><span class="lowerident">
 handleErr</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">err</span><span class="kw"> -&gt;</span><span class="delimeter">
 
@@ -107,9 +111,13 @@ deleteAppTask</span><span class="kw"> :</span><span class="upperident"> Str</spa
 createAppTask</span><span class="kw"> :</span><span class="upperident"> Str</span><span class="delimeter">,</span><span class="upperident"> AppTask</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="delimeter"> [</span><span class="upperident">TaskWasEmpty</span><span class="delimeter">,</span><span class="upperident"> SqliteErrorCreatingTask</span><span class="lowerident"> _</span><span class="delimeter">]</span><span class="lowerident">_</span><span class="lowerident">
 getAppTasks</span><span class="kw"> :</span><span class="upperident"> Str</span><span class="delimeter">,</span><span class="upperident"> Str</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="delimeter"> (</span><span class="upperident">List</span><span class="upperident"> AppTask</span><span class="delimeter">)</span><span class="delimeter"> [</span><span class="upperident">SqliteErrorGetTask</span><span class="lowerident"> _</span><span class="delimeter">,</span><span class="upperident"> UnableToDecodeTask</span><span class="lowerident"> _</span><span class="delimeter">]</span><span class="lowerident">_</span><span class="lowerident">
 executeSql</span><span class="kw"> :</span><span class="upperident"> Str</span><span class="delimeter">,</span><span class="upperident"> Str</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="delimeter"> (</span><span class="upperident">List</span><span class="upperident"> U8</span><span class="delimeter">)</span><span class="lowerident"> _</span></samp></pre>
+<p>Various tasks such as <code>getAppTasks</code> would call out to sqlite and I wrapped the errors with custom tags such as <code>SqliteErrorGetTask</code> or <code>UnableToDecodeTask</code> which made it much easier to identify where the error originated.</p>
+<p>Using a tag union <code>[SqliteErrorGetTask _, UnableToDecodeTask _]_</code> also helped to see all of the errors this task could possibly return in one location. </p>
+<p>These error tags are also seamlessly merged into larger tag unions and handled by <code>handleErr</code> if not captured in the request handler. </p>
+<p>Another helpful feature was the roc language server. If I wanted to see which errors are possible at a particular point I could hover over the type to see what the compiler had inferred. Below is an example of showing the full values for the <code>SqliteErrorCreatingTask _</code> tag.</p>
+<img class="demo-img" src="/ss-rls-errors.png" alt="screenshot showing language server providing error tag union" />
 <h3>Parsing FormURLEncoded</h3>
 <p><a href="https://en.wikipedia.org/wiki/Percent-encoding">URL / Percent Encoded</a> values are returned by the browser when submitting a form. The function to parse these values is currently not available, so I wrote the following to do that.</p>
-<p>This was quick to write and worked well for my immediate needs. However I think I should re-write this to return a <code>Result (Dict Str Str) [InvalidUtf8Key, InvalidUtf8Value]</code> or similar, instead of crashing which is pretty hacky.</p>
 <pre><samp><span class="lowerident">parseFormUrlEncoded</span><span class="kw"> :</span><span class="upperident"> List</span><span class="upperident"> U8</span><span class="kw"> -&gt;</span><span class="upperident"> Dict</span><span class="upperident"> Str</span><span class="upperident"> Str</span><span class="lowerident">
 parseFormUrlEncoded</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">bytes</span><span class="kw"> -&gt;</span><span class="lowerident">
 
@@ -138,4 +146,64 @@ parseFormUrlEncoded</span><span class="kw"> =</span><span class="kw"> \</span><s
 
             [</span><span class="lowerident">first</span><span class="delimeter">,</span><span class="delimeter"> .</span><span class="delimeter">.</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="lowerident"> go</span><span class="lowerident"> next</span><span class="lowerident"> state</span><span class="lowerident"> key</span><span class="delimeter"> (</span><span class="upperident">List</span><span class="delimeter">.</span><span class="lowerident">append</span><span class="lowerident"> chomped</span><span class="lowerident"> first</span><span class="delimeter">)</span><span class="lowerident"> dict</span><span class="lowerident">
 
-    go</span><span class="lowerident"> bytes</span><span class="upperident"> ParsingKey</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter"> (</span><span class="upperident">Dict</span><span class="delimeter">.</span><span class="lowerident">empty</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="delimeter">)</span></samp></pre></main><footer></footer></body></html>
+    go</span><span class="lowerident"> bytes</span><span class="upperident"> ParsingKey</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter"> (</span><span class="upperident">Dict</span><span class="delimeter">.</span><span class="lowerident">empty</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="delimeter">)</span><span class="lowerident">
+
+unwrap</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">thing</span><span class="delimeter">,</span><span class="lowerident"> msg</span><span class="kw"> -&gt;</span><span class="kw">
+    when</span><span class="lowerident"> thing</span><span class="kw"> is</span><span class="upperident">
+        Ok</span><span class="lowerident"> unwrapped</span><span class="kw"> -&gt;</span><span class="lowerident"> unwrapped</span><span class="upperident">
+        Err</span><span class="lowerident"> _</span><span class="kw"> -&gt;</span><span class="kw"> crash</span><span class="literal"> "CRASHED \(msg)"</span></samp></pre>
+<p>This was quick to write and worked well for my immediate needs. However I think I will re-write this to return a <code>Result (Dict Str Str) [InvalidUtf8Key, InvalidUtf8Value]</code> or similar, instead of crashing which is definitely a bit hacky. </p>
+<p>I think I should be able to modify to something like the following.</p>
+<pre><samp><span class="lowerident">keyStr</span><span class="kw"> &lt;-</span><span class="lowerident"> key</span><span class="kw"> |&gt;</span><span class="upperident"> Str</span><span class="delimeter">.</span><span class="lowerident">fromUtf8</span><span class="kw"> |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">mapErr</span><span class="delimeter"> (</span><span class="kw">\</span><span class="lowerident">_</span><span class="kw"> -&gt;</span><span class="upperident"> InvalidUtf8Key</span><span class="delimeter">)</span><span class="kw"> |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">try</span></samp></pre>
+<h3>Query Sqlite3 and return JSON</h3>
+<p>I wrote a <code>Task</code> which calls sqlite and returns the response encoded in JSON.</p>
+<pre><samp><span class="lowerident">executeSql</span><span class="kw"> :</span><span class="upperident"> Str</span><span class="delimeter">,</span><span class="upperident"> Str</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="delimeter"> (</span><span class="upperident">List</span><span class="upperident"> U8</span><span class="delimeter">)</span><span class="lowerident"> _</span><span class="lowerident">
+executeSql</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">query</span><span class="delimeter">,</span><span class="lowerident"> dbPath</span><span class="kw"> -&gt;</span><span class="lowerident">
+    output</span><span class="kw"> &lt;-</span><span class="upperident">
+        Command</span><span class="delimeter">.</span><span class="lowerident">new</span><span class="literal"> "sqlite3"</span><span class="kw">
+        |&gt;</span><span class="upperident"> Command</span><span class="delimeter">.</span><span class="lowerident">arg</span><span class="lowerident"> dbPath</span><span class="kw">
+        |&gt;</span><span class="upperident"> Command</span><span class="delimeter">.</span><span class="lowerident">arg</span><span class="literal"> ".mode json"</span><span class="kw">
+        |&gt;</span><span class="upperident"> Command</span><span class="delimeter">.</span><span class="lowerident">arg</span><span class="lowerident"> query</span><span class="kw">
+        |&gt;</span><span class="upperident"> Command</span><span class="delimeter">.</span><span class="lowerident">output</span><span class="kw">
+        |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">await</span><span class="kw">
+
+    when</span><span class="lowerident"> output</span><span class="delimeter">.</span><span class="lowerident">status</span><span class="kw"> is</span><span class="upperident">
+        Err</span><span class="lowerident"> _</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">err</span><span class="delimeter"> (</span><span class="upperident">SqlError</span><span class="lowerident"> output</span><span class="delimeter">.</span><span class="lowerident">stderr</span><span class="delimeter">)</span><span class="upperident">
+        Ok</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="kw"> -&gt;</span><span class="kw"> 
+            if</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">isEmpty</span><span class="lowerident"> output</span><span class="delimeter">.</span><span class="lowerident">stdout</span><span class="kw"> then</span><span class="upperident"> 
+                Task</span><span class="delimeter">.</span><span class="lowerident">err</span><span class="upperident"> NilRows</span><span class="kw">
+            else</span><span class="upperident"> 
+                Task</span><span class="delimeter">.</span><span class="lowerident">ok</span><span class="lowerident"> output</span><span class="delimeter">.</span><span class="lowerident">stdout</span></samp></pre>
+<p>Here are a couple of examples where I use this task. I am particularly happy with being able to pipeline this function with the SQL query as I think it is much easier to follow the logic of what is happening here. </p>
+<pre><samp><span class="lowerident">findUser</span><span class="kw"> :</span><span class="upperident"> Str</span><span class="delimeter">,</span><span class="upperident"> Str</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="delimeter"> {</span><span class="lowerident">id</span><span class="kw"> :</span><span class="upperident"> U64</span><span class="delimeter">,</span><span class="lowerident"> username</span><span class="kw"> :</span><span class="upperident"> Str</span><span class="delimeter">}</span><span class="lowerident"> _</span><span class="lowerident">
+findUser</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">dbPath</span><span class="delimeter">,</span><span class="lowerident"> username</span><span class="kw"> -&gt;</span><span class="literal">
+    """
+    SELECT user_id as userId FROM users WHERE name = '\(escapeSQL username)';
+    """</span><span class="kw">
+    |&gt;</span><span class="lowerident"> executeSql</span><span class="lowerident"> dbPath</span><span class="kw">
+    |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">await</span><span class="kw"> \</span><span class="lowerident">bytes</span><span class="kw"> -&gt;</span><span class="kw">
+        when</span><span class="upperident"> Decode</span><span class="delimeter">.</span><span class="lowerident">fromBytes</span><span class="lowerident"> bytes</span><span class="lowerident"> json</span><span class="kw"> is</span><span class="upperident"> 
+            Err</span><span class="lowerident"> msg</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">err</span><span class="delimeter"> (</span><span class="upperident">ErrParsingJson</span><span class="lowerident"> msg</span><span class="lowerident"> bytes</span><span class="delimeter">)</span><span class="upperident">
+            Ok</span><span class="lowerident"> userList</span><span class="kw"> -&gt;</span><span class="lowerident">
+                userList</span><span class="kw">
+                |&gt;</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">first</span><span class="kw"> 
+                |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="kw"> \</span><span class="delimeter">{</span><span class="lowerident">userId</span><span class="delimeter">}</span><span class="kw"> -&gt;</span><span class="delimeter"> {</span><span class="lowerident">id</span><span class="kw">:</span><span class="lowerident"> userId</span><span class="delimeter">,</span><span class="lowerident"> username</span><span class="delimeter">}</span><span class="kw">
+                |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">fromResult</span><span class="kw">
+    |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">mapErr</span><span class="kw"> \</span><span class="lowerident">err</span><span class="kw"> -&gt;</span><span class="kw"> if</span><span class="lowerident"> err</span><span class="op"> ==</span><span class="upperident"> NilRows</span><span class="kw"> then</span><span class="upperident"> UserNotFound</span><span class="lowerident"> username</span><span class="kw"> else</span><span class="lowerident"> err</span><span class="lowerident">
+
+loginUser</span><span class="kw"> :</span><span class="upperident"> Str</span><span class="delimeter">,</span><span class="upperident"> U64</span><span class="delimeter">,</span><span class="upperident"> Str</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="lowerident"> _</span><span class="lowerident">
+loginUser</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">dbPath</span><span class="delimeter">,</span><span class="lowerident"> sessionId</span><span class="delimeter">,</span><span class="lowerident"> username</span><span class="kw"> -&gt;</span><span class="lowerident">
+
+    user</span><span class="kw"> &lt;-</span><span class="lowerident"> findUser</span><span class="lowerident"> dbPath</span><span class="lowerident"> username</span><span class="kw"> |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">await</span><span class="literal">
+
+    """
+    UPDATE sessions
+    SET user_id = \(Num.toStr user.id)
+    WHERE session_id = \(Num.toStr sessionId);
+    """</span><span class="kw">
+    |&gt;</span><span class="lowerident"> executeSql</span><span class="lowerident"> dbPath</span><span class="kw">
+    |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">attempt</span><span class="kw"> \</span><span class="lowerident">result</span><span class="kw"> -&gt;</span><span class="kw">
+        when</span><span class="lowerident"> result</span><span class="kw"> is</span><span class="upperident"> 
+            Err</span><span class="upperident"> NilRows</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">ok</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="upperident">
+            Ok</span><span class="lowerident"> _</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">ok</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="upperident">
+            Err</span><span class="lowerident"> err</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">err</span><span class="lowerident"> err</span></samp></pre></main><footer></footer></body></html>

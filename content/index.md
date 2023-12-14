@@ -5,7 +5,7 @@
 
 Hi, I'm Luke. 
 
-I'm passionate about technology, and like to challenging myself to learn more and think creatively.
+I'm passionate about technology, and like to challenge myself to learn more and think creatively.
 
 You can find me on [GitHub](https://github.com/lukewilliamboswell), or [LinkedIn](https://www.linkedin.com/in/lukewilliamboswell/).
 
