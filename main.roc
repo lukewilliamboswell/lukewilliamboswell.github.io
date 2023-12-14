@@ -39,7 +39,7 @@ view = \page, htmlContent ->
             Html.title [] [text (getTitle page)],
             meta [name "description", content (getDescription page)],
             meta [name "viewport", content "width=device-width"],
-            link [rel "stylesheet", href "/styles.css"],
+            link [rel "stylesheet", href "/site.css"],
         ],
         body bodyAttrs [
             main [] mainBody,

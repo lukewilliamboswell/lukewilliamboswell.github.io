@@ -1,0 +1,236 @@
+:root {
+    /* WCAG AAA Compliant colors */
+    --code-bg: #f4f8f9;
+    --gray: #717171;
+    --orange: #bf5000;
+    --green: #0b8400;
+    --cyan: #067c94;
+    --blue: #05006d;
+    --violet: #7c38f5;
+    --violet-bg: #ece2fd;
+    --magenta: #a20031;
+
+    --link-color: var(--violet);
+    --code-link-color: var(--violet);
+    --text-color: #000;
+    --text-hover-color: var(--violet);
+    --body-bg-color: #ffffff;
+
+    --font-sans: -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial,
+        sans-serif;
+    --font-mono: SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier,
+        monospace;
+    --font-serif: Times New Roman, Georgia, Garamond;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* WCAG AAA Compliant colors */
+        --code-bg: #202746;
+        --gray: #b6b6b6;
+        --orange: #fd6e08;
+        --green: #8ecc88;
+        --cyan: #12c9be;
+        --blue: #b1afdf;
+        --violet: #caadfb;
+        --violet-bg: #332944;
+        --magenta: #f39bac;
+
+        --link-color: var(--violet);
+        --code-link-color: var(--violet);
+        --text-color: #eaeaea;
+        --body-bg-color: #0e0e0f;
+
+        --code-color: #eeeeee;
+    }
+
+    html {
+        scrollbar-color: #8f8f8f #2f2f2f;
+    }
+}
+
+body {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    color: var(--text-color);
+    background-color: var(--body-bg-color);
+}
+
+main {
+    max-width: var(--body-max-width);
+    margin: auto;
+    padding: 12px;
+    box-sizing: border-box;
+}
+
+a {
+    color: var(--violet);
+    text-decoration: none;
+    font-family: var(--font-sans);
+}
+
+a:hover,
+a:hover code {
+    text-decoration: underline;
+}
+
+.post-date {
+    font-family: var(--font-sans);
+    color: var(--gray);
+}
+
+p {
+    overflow-wrap: break-word;
+    margin: 24px 0;
+}
+
+code {
+    font-family: var(--font-mono);
+    color: var(--code-color);
+    background-color: var(--code-bg);
+    display: inline-block;
+    font-size: 12px;
+}
+
+p code {
+    padding: 0 0px;
+}
+
+code a,
+a code {
+    text-decoration: none;
+    color: var(--code-link-color);
+    background: none;
+    padding: 0;
+}
+
+code a:visited,
+a:visited code {
+    color: var(--code-link-color);
+}
+
+pre {
+    position: relative;
+    margin: 36px 0;
+    padding: 8px 8px;
+    box-sizing: border-box;
+    background-color: var(--code-bg);
+    overflow-x: auto;
+}
+
+.hidden {
+    /* Use !important to win all specificity fights. */
+    display: none !important;
+}
+
+@media only screen and (max-device-width: 480px) and (orientation: portrait) {
+    :root {
+        --main-padding-side: 18px;
+    }
+
+    body {
+        grid-template-columns: auto;
+        grid-template-rows: [top-header] var(--top-header-height) [before-sidebar] auto [sidebar] auto [above-footer] auto [footer] auto;
+
+        margin: 0;
+        min-width: 320px;
+        max-width: 100%;
+    }
+}
+
+/* Comments `#` and Documentation comments `##` */
+samp .comment,
+code .comment {
+    color: var(--green);
+}
+
+/* Number, String, Tag literals */
+samp .storage.type,
+code .storage.type,
+samp .string,
+code .string,
+samp .string.begin,
+code .string.begin,
+samp .string.end,
+code .string.end,
+samp .constant,
+code .constant {
+    color: var(--text-color);
+}
+
+samp .literal,
+code .literal {
+    color: var(--orange);
+}
+
+/* Keywords and punctuation */
+samp .keyword,
+code .keyword,
+samp .punctuation.section,
+code .punctuation.section,
+samp .punctuation.separator,
+code .punctuation.separator,
+samp .punctuation.terminator,
+code .punctuation.terminator,
+samp .kw,
+code .kw {
+    color: var(--blue);
+}
+
+/* Operators */
+samp .op,
+code .op,
+samp .keyword.operator,
+code .keyword.operator {
+    color: var(--cyan);
+}
+
+/* Delimieters */
+samp .delimeter,
+code .delimeter {
+    color: var(--gray);
+}
+
+/* Variables modules and field names */
+samp .function,
+code .function,
+samp .meta.group,
+code .meta.group,
+samp .meta.block,
+code .meta.block,
+samp .lowerident,
+code .lowerident {
+    color: var(--text-color);
+}
+
+/* Types, Tags, and Modules */
+samp .type,
+code .type,
+samp .meta.path,
+code .meta.path,
+samp .upperident,
+code .upperident {
+    color: var(--violet);
+}
+
+samp .dim,
+code .dim {
+    opacity: 0.55;
+}
+
+ul.links {
+    display: flex;
+    list-style: none;
+}
+
+ul.links li a {
+    text-decoration: none;
+    padding: 8px;
+    color: var(--link-color);
+}
+
+ul.links li a:hover {
+    background-color: var(--code-bg);
+}
