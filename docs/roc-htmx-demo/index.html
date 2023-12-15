@@ -1,31 +1,27 @@
-<!DOCTYPE html><html  lang="en" class="no-js"><head><meta  charset="utf-8"><title></title><meta  name="description" content=""><meta  name="viewport" content="width=device-width"><link  rel="stylesheet" href="/site.css"></head><body  id="index-page"><main><p><a href="/">Return to Home</a></p>
+<!DOCTYPE html><html  lang="en" class="no-js"><head><meta  charset="utf-8"><title>Roc+htmx Demo</title><meta  name="description" content="An early exploration of Roc+htmx"><meta  name="viewport" content="width=device-width"><link  rel="stylesheet" href="/site.css"></head><body  id="index-page"><main><p><a href="/">Return to Home</a></p>
 <h1>Fullstack Roc + htmx—an early exploration 🔍📚🔭</h1>
-<p><time class="post-date" datetime="2023-12-14">14 Dec 2023</time></p>
-<p>With this exploration, I aimed to expand on one of the example apps for the <a href="https://github.com/roc-lang/basic-webserver">roc-lang/basic-webserver</a> platform, and see if I could build a full-stack web application using the <a href="https://htmx.org/">htmx</a> library.</p>
-<p>I'm sharing code that isn't polished and continues to evolve as I learn more about Roc and htmx. However, I want to share what I have, flaws and all, so that others can benefit from this exploration.</p>
+<p><time class="post-date" datetime="2023-12-15">15 Dec 2023</time></p>
+<p>With this exploration, I aimed to expand on one of the example apps for the <a href="https://github.com/roc-lang/basic-webserver">roc-lang/basic-webserver</a> platform and see if I could build a full-stack web application using the <a href="https://htmx.org/">htmx</a> library.</p>
+<p>I'm sharing code that isn't polished and continues to evolve as I learn more about Roc and htmx. I'm still working through the <a href="https://hypermedia.systems">Hypermedia Systems</a> book and tinkering with different ideas. However, I want to share what I have, flaws and all, so that others can benefit from this exploration.</p>
 <p>I hope this encourages people to build cool things. </p>
 <h2>Goals</h2>
-<ul>
+<ol>
 <li>Explore Roc and htmx for developing web applications</li>
 <li>Learn more about Roc and htmx</li>
 <li>Find issues and contribute fixes for the roc compiler and packages e.g. <a href="https://github.com/lukewilliamboswell/roc-json">lukewilliamboswell/roc-json</a></li>
-</ul>
-<h2>Summary</h2>
+</ol>
+<p>I found it very easy to work with Roc + htmx to build this demo app, and I feel confident my experience will scale to a larger app. I have a hobby project in mind I would like to start soon, and I look forward to extending the lessons here to build this using fullstack Roc.</p>
+<p>I liked the simplicity of using Roc to build a webserver. The html and htmx libraries are conceptually very thin layers, so it was easy to reason about behaviour and focus on the interaction wanted. I'm not as familiar with web dev, so I feel most of my time was spent reading through the <a href="https://getbootstrap.com">Bootstrap</a> docs.</p>
+<p>I refactored multiple times, testing different ways to handle errors, work with sqlite, layout pages, and separate html views etc. The compiler was a helpful assistant, and I found myself making progressively larger changes and using <code>roc check</code> occasionally to see if I had introduced any errors.</p>
+<h2>Demo</h2>
 <p>The code for this experiment is located at <a href="https://github.com/lukewilliamboswell/lukewilliamboswell.github.io/tree/main/content/roc-htmx-demo">lukewilliamboswell.github.io/content/roc-htmx-demo</a>. </p>
 <p>You can run the application using <code>DB_PATH=test.db roc dev main.roc</code>, provided you have <code>roc</code> and <code>sqlite3</code> in your environment PATH.</p>
 <p>This application uses the <a href="https://github.com/roc-lang/basic-webserver">roc-lang/basic-webserver</a> platform which calls <code>main : Http.Request -> Task Http.Response []</code> on each http request.</p>
-<h3>Future Ideas</h3>
-<ul>
-<li>Modify to use PostgreSQL so that I can use this to help test <a href="https://github.com/agu-z/roc-pg">agu-z/roc-pg</a></li>
-<li>Modify to help test <a href="https://github.com/tweedegolf/nea">tweedegolf/nea</a> which aims to be a high performance webserver platform</li>
-</ul>
-<h3>Demonstration</h3>
-<p>Below is an illustration of the current application. It shows navigating between different pages, managing a task list, and a logging into the application as a user. </p>
+<p>Below is an illustration of the current application. It shows navigating between different pages, managing a task list, and logging into the application as a user. </p>
 <img class="demo-img" src="/example-rhtmx.gif" alt="screen capture of the application being used"/>
-<h2>Observations</h2>
-<h3>Session Middle-ware</h3>
+<h2>Session middleware</h2>
 <p>I wanted to track users across http calls, so wrote the following which creates and sets a cookie with a <code>sessionId : U64</code> value to be kept in the browser. I keep track of these sessions in a sqlite table and can associate these with a user to simulate being &quot;logged in&quot;.</p>
-<p>I think the future <code>Stored</code> ability would enable me to cache the session values in-memory instead of calling out to sqlite on every request which would be a significant improvement if I was expecting a lot of traffic. </p>
+<p>I think the future <code>Stored</code> ability would enable me to cache the session values in memory instead of calling out to sqlite on every request which would be a significant improvement if I was expecting a lot of traffic. The <code>Stored</code> ability will be introduced with the accepted <a href="https://github.com/lukewilliamboswell/roc-awesome#task-as-builtin">Task as Builtin</a> design proposal.</p>
 <pre><samp><span class="lowerident">maybeSession</span><span class="kw"> &lt;-</span><span class="lowerident"> parseSessionId</span><span class="lowerident"> req</span><span class="kw"> |&gt;</span><span class="lowerident"> getSession</span><span class="lowerident"> dbPath</span><span class="kw"> |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">attempt</span><span class="kw">
 when</span><span class="lowerident"> maybeSession</span><span class="kw"> is</span><span class="comment">
 
@@ -52,7 +48,7 @@ when</span><span class="lowerident"> maybeSession</span><span class="kw"> is</sp
 
     # Handle any server errors</span><span class="upperident">
     Err</span><span class="lowerident"> err</span><span class="kw"> -&gt;</span><span class="lowerident"> handleErr</span><span class="lowerident"> err</span></samp></pre>
-<h3>Request Handling</h3>
+<h2>Request handling</h2>
 <p>For routing the request, I used pattern matching on a tag for the method and <code>List Str</code> for url segments. This worked well and was easy to follow. </p>
 <p>I'm not sure how well this scales for a larger application, but it was simple to get started with, and easy to re-factor as I needed, e.g. when I included the <code>dbPath : Str</code> and <code>session : Session</code> arguments.</p>
 <pre><samp><span class="lowerident">handleReq</span><span class="kw"> :</span><span class="upperident"> Session</span><span class="delimeter">,</span><span class="upperident"> Str</span><span class="delimeter">,</span><span class="upperident"> Request</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="upperident"> Response</span><span class="lowerident"> _</span><span class="lowerident">
@@ -87,9 +83,9 @@ handleReq</span><span class="kw"> =</span><span class="kw"> \</span><span class=
                             Err</span><span class="lowerident"> err</span><span class="kw"> -&gt;</span><span class="lowerident"> handleErr</span><span class="lowerident"> err</span><span class="comment">
 
         # ... etc</span></samp></pre>
-<h3>Error Handler</h3>
+<h2>Error handling</h2>
 <p>For handling errors I used a single <code>handleErr</code> function to capture any unhandled errors. This task prints an error message to stderr, and responds with a server error. </p>
-<p>I found this to be useful for quickly identifying edge cases and as I contiuously refactored various implementation and function signatures. </p>
+<p>I found this to be useful for quickly identifying edge cases as I refactored various function implementations. </p>
 <pre><samp><span class="lowerident">handleErr</span><span class="kw"> :</span><span class="lowerident"> _</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="upperident"> Response</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="lowerident">_</span><span class="lowerident">
 handleErr</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">err</span><span class="kw"> -&gt;</span><span class="delimeter">
 
@@ -114,10 +110,10 @@ executeSql</span><span class="kw"> :</span><span class="upperident"> Str</span><
 <p>Various tasks such as <code>getAppTasks</code> would call out to sqlite and I wrapped the errors with custom tags such as <code>SqliteErrorGetTask</code> or <code>UnableToDecodeTask</code> which made it much easier to identify where the error originated.</p>
 <p>Using a tag union <code>[SqliteErrorGetTask _, UnableToDecodeTask _]_</code> also helped to see all of the errors this task could possibly return in one location. </p>
 <p>These error tags are also seamlessly merged into larger tag unions and handled by <code>handleErr</code> if not captured in the request handler. </p>
-<p>Another helpful feature was the roc language server. If I wanted to see which errors are possible at a particular point I could hover over the type to see what the compiler had inferred. Below is an example of showing the full values for the <code>SqliteErrorCreatingTask _</code> tag.</p>
+<p>I liked using the <a href="https://github.com/ivan-demchenko/roc-vscode-unofficial">VS Code extension</a> with the roc language server. If I wanted to see which errors are possible at a particular point I could hover over the type to see what the compiler had inferred. Below is an example of showing the full values for the <code>SqliteErrorCreatingTask _</code> tag.</p>
 <img class="demo-img" src="/ss-rls-errors.png" alt="screenshot showing language server providing error tag union" />
-<h3>Parsing FormURLEncoded</h3>
-<p><a href="https://en.wikipedia.org/wiki/Percent-encoding">URL / Percent Encoded</a> values are returned by the browser when submitting a form. The function to parse these values is currently not available, so I wrote the following to do that.</p>
+<h2>Parsing URL Encoded values</h2>
+<p><a href="https://en.wikipedia.org/wiki/Percent-encoding">URL Encoded</a> values are returned by the browser when submitting a form. The function to parse these values is currently not available, so I wrote the following to do that.</p>
 <pre><samp><span class="lowerident">parseFormUrlEncoded</span><span class="kw"> :</span><span class="upperident"> List</span><span class="upperident"> U8</span><span class="kw"> -&gt;</span><span class="upperident"> Dict</span><span class="upperident"> Str</span><span class="upperident"> Str</span><span class="lowerident">
 parseFormUrlEncoded</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">bytes</span><span class="kw"> -&gt;</span><span class="lowerident">
 
@@ -152,11 +148,11 @@ unwrap</span><span class="kw"> =</span><span class="kw"> \</span><span class="lo
     when</span><span class="lowerident"> thing</span><span class="kw"> is</span><span class="upperident">
         Ok</span><span class="lowerident"> unwrapped</span><span class="kw"> -&gt;</span><span class="lowerident"> unwrapped</span><span class="upperident">
         Err</span><span class="lowerident"> _</span><span class="kw"> -&gt;</span><span class="kw"> crash</span><span class="literal"> "CRASHED \(msg)"</span></samp></pre>
-<p>This was quick to write and worked well for my immediate needs. However I think I will re-write this to return a <code>Result (Dict Str Str) [InvalidUtf8Key, InvalidUtf8Value]</code> or similar, instead of crashing which is definitely a bit hacky. </p>
+<p>This was quick to write and worked well for my immediate needs. However I think I will re-write this to return a <code>Result (Dict Str Str) [InvalidUtf8Key, InvalidUtf8Value]</code> or similar, instead of crashing which is a bit hacky. </p>
 <p>I think I should be able to modify to something like the following.</p>
 <pre><samp><span class="lowerident">keyStr</span><span class="kw"> &lt;-</span><span class="lowerident"> key</span><span class="kw"> |&gt;</span><span class="upperident"> Str</span><span class="delimeter">.</span><span class="lowerident">fromUtf8</span><span class="kw"> |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">mapErr</span><span class="delimeter"> (</span><span class="kw">\</span><span class="lowerident">_</span><span class="kw"> -&gt;</span><span class="upperident"> InvalidUtf8Key</span><span class="delimeter">)</span><span class="kw"> |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">try</span></samp></pre>
-<h3>Query Sqlite3 and return JSON</h3>
-<p>I wrote a <code>Task</code> which calls sqlite and returns the response encoded in JSON.</p>
+<h2>Query sqlite3 and return JSON</h2>
+<p>I wrote a <code>Task</code> which calls sqlite and returns the response encoded in <a href="https://en.wikipedia.org/wiki/JSON">JSON</a> as a <code>List U8</code>.</p>
 <pre><samp><span class="lowerident">executeSql</span><span class="kw"> :</span><span class="upperident"> Str</span><span class="delimeter">,</span><span class="upperident"> Str</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="delimeter"> (</span><span class="upperident">List</span><span class="upperident"> U8</span><span class="delimeter">)</span><span class="lowerident"> _</span><span class="lowerident">
 executeSql</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">query</span><span class="delimeter">,</span><span class="lowerident"> dbPath</span><span class="kw"> -&gt;</span><span class="lowerident">
     output</span><span class="kw"> &lt;-</span><span class="upperident">
@@ -206,4 +202,103 @@ loginUser</span><span class="kw"> =</span><span class="kw"> \</span><span class=
         when</span><span class="lowerident"> result</span><span class="kw"> is</span><span class="upperident"> 
             Err</span><span class="upperident"> NilRows</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">ok</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="upperident">
             Ok</span><span class="lowerident"> _</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">ok</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="upperident">
-            Err</span><span class="lowerident"> err</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">err</span><span class="lowerident"> err</span></samp></pre></main><footer></footer></body></html>
+            Err</span><span class="lowerident"> err</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">err</span><span class="lowerident"> err</span></samp></pre>
+<h2>Login page</h2>
+<p>For the login page I used <a href="https://getbootstrap.com">Bootstrap</a> and the <a href="https://github.com/Hasnep/roc-html">Hasnep/roc-html</a> package which were good to work with. I simply translated the html I wanted into Roc, for example <code>&lt;h5 class=&quot;card-title&quot;&gt;Login Form&lt;/h5&gt;</code> becomes <code>h5 [ class "card-title"] [ text "Login Form"]</code>.</p>
+<p>I represented the different ways I wanted to render the login page using a tag union <code>[Fresh, UserNotProvided, UserNotFound Str]</code>. Using a payload with the username string was a nice way to provide feedback if the user input was invalid. </p>
+<pre><samp><span class="lowerident">loginPage</span><span class="kw"> :</span><span class="upperident"> Session</span><span class="delimeter">,</span><span class="delimeter"> [</span><span class="upperident">Fresh</span><span class="delimeter">,</span><span class="upperident"> UserNotProvided</span><span class="delimeter">,</span><span class="upperident"> UserNotFound</span><span class="upperident"> Str</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="upperident"> Html</span><span class="delimeter">.</span><span class="upperident">Node</span><span class="lowerident">
+loginPage</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">session</span><span class="delimeter">,</span><span class="lowerident"> state</span><span class="kw"> -&gt;</span><span class="delimeter">
+
+    (</span><span class="lowerident">usernameInputClass</span><span class="delimeter">,</span><span class="lowerident"> usernameValidationClass</span><span class="delimeter">,</span><span class="lowerident"> usernameValidationText</span><span class="delimeter">)</span><span class="kw"> =</span><span class="kw"> 
+        when</span><span class="lowerident"> state</span><span class="kw"> is</span><span class="upperident">
+            Fresh</span><span class="kw"> -&gt;</span><span class="delimeter"> (</span><span class="literal">"form-control"</span><span class="delimeter">,</span><span class="literal"> "invalid-feedback"</span><span class="delimeter">,</span><span class="literal"> ""</span><span class="delimeter">)</span><span class="upperident">
+            UserNotFound</span><span class="lowerident"> str</span><span class="kw"> -&gt;</span><span class="delimeter"> (</span><span class="literal">"form-control is-invalid"</span><span class="delimeter">,</span><span class="literal"> "invalid-feedback"</span><span class="delimeter">,</span><span class="literal"> "Username \(str) not found"</span><span class="delimeter">)</span><span class="upperident">
+            UserNotProvided</span><span class="kw"> -&gt;</span><span class="delimeter"> (</span><span class="literal">"form-control is-invalid"</span><span class="delimeter">,</span><span class="literal"> "invalid-feedback"</span><span class="delimeter">,</span><span class="literal"> "Missing username"</span><span class="delimeter">)</span><span class="lowerident">
+
+    layout</span><span class="upperident"> LoginPage</span><span class="lowerident"> session</span><span class="delimeter"> [</span><span class="lowerident">
+        div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "container"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">
+            div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "row justify-content-center"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">
+                div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "col-md-6 card"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">
+                    div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "card-body"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">
+                        h5</span><span class="delimeter"> [</span><span class="lowerident"> class</span><span class="literal"> "card-title"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident"> text</span><span class="literal"> "Login Form"</span><span class="delimeter">]</span><span class="delimeter">,</span><span class="lowerident">
+                        form</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "container-fluid"</span><span class="delimeter">,</span><span class="lowerident"> action</span><span class="literal"> "/login"</span><span class="delimeter">,</span><span class="lowerident"> method</span><span class="literal"> "post"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">
+                            div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "col-auto"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">
+                                label</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "col-form-label"</span><span class="delimeter">,</span><span class="lowerident"> for</span><span class="literal"> "loginUsername"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">text</span><span class="literal"> "Username"</span><span class="delimeter">]</span><span class="delimeter">
+                            ]</span><span class="delimeter">,</span><span class="lowerident">
+                            div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "col-auto"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">
+                                input</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="lowerident"> usernameInputClass</span><span class="delimeter">,</span><span class="delimeter"> (</span><span class="lowerident">attr</span><span class="literal"> "type"</span><span class="delimeter">)</span><span class="literal"> "username"</span><span class="delimeter">,</span><span class="delimeter"> (</span><span class="lowerident">attr</span><span class="literal"> "required"</span><span class="delimeter">)</span><span class="literal"> ""</span><span class="delimeter">,</span><span class="lowerident"> id</span><span class="literal"> "loginUsername"</span><span class="delimeter">,</span><span class="lowerident"> name</span><span class="literal"> "user"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter">,</span><span class="lowerident">
+                                div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="lowerident"> usernameValidationClass</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">text</span><span class="lowerident"> usernameValidationText</span><span class="delimeter">]</span><span class="delimeter">,</span><span class="delimeter">
+                            ]</span><span class="delimeter">,</span><span class="lowerident">
+                            div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "col-auto"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">
+                                label</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "col-form-label"</span><span class="delimeter">,</span><span class="lowerident"> for</span><span class="literal"> "loginPassword"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">text</span><span class="literal"> "Password (not used)"</span><span class="delimeter">]</span><span class="delimeter">
+                            ]</span><span class="delimeter">,</span><span class="lowerident">
+                            div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "col-auto"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">
+                                input</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "form-control disabled"</span><span class="delimeter">,</span><span class="delimeter"> (</span><span class="lowerident">attr</span><span class="literal"> "type"</span><span class="delimeter">)</span><span class="literal"> "password"</span><span class="delimeter">,</span><span class="delimeter"> (</span><span class="lowerident">attr</span><span class="literal"> "disabled"</span><span class="delimeter">)</span><span class="literal"> ""</span><span class="delimeter">,</span><span class="lowerident"> id</span><span class="literal"> "loginPassword"</span><span class="delimeter">,</span><span class="lowerident"> name</span><span class="literal"> "pass"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter">
+                            ]</span><span class="delimeter">,</span><span class="lowerident">
+                            div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "col-auto mt-2"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">
+                                button</span><span class="delimeter"> [</span><span class="delimeter">(</span><span class="lowerident">attr</span><span class="literal"> "type"</span><span class="delimeter">)</span><span class="literal"> "submit"</span><span class="delimeter">,</span><span class="delimeter"> (</span><span class="lowerident">attr</span><span class="literal"> "type"</span><span class="delimeter">)</span><span class="literal"> "button"</span><span class="delimeter">,</span><span class="lowerident"> class</span><span class="literal"> "btn btn-primary"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">text</span><span class="literal"> "Submit"</span><span class="delimeter">]</span><span class="delimeter">
+                            ]</span><span class="delimeter">
+                        ]</span><span class="delimeter">
+                    ]</span><span class="delimeter">
+                ]</span><span class="delimeter">
+            ]</span><span class="delimeter">
+        ]</span><span class="delimeter">
+    ]</span></samp></pre>
+<h2>Using htmx to make an interactive table</h2>
+<p>I used htmx to delete tasks from the table of <code>AppTask</code>'s (unfortunately named similar to <code>Task</code> 😅). </p>
+<p>With <code>hx-target</code>, clicking the delete button will POST to the endpoint <code>/task/&ltid&gt/delete</code>. The server returns an updated table, and swaps the rendered html into <code>#taskTable</code> without re-rendering the page. I like how simple the <a href="https://en.wikipedia.org/wiki/Post/Redirect/Get">Post/Redirect/Get pattern</a> is to work with.</p>
+<p>To make this more <a href="https://en.wikipedia.org/wiki/REST">REST</a>ful I think I will update this to use <code>hx-delete</code> and remove the need for the additional <code>/delete</code> url segment.</p>
+<pre><samp><span class="lowerident">listTaskView</span><span class="kw"> :</span><span class="upperident"> List</span><span class="upperident"> AppTask</span><span class="delimeter">,</span><span class="upperident"> Str</span><span class="kw"> -&gt;</span><span class="upperident"> Html</span><span class="delimeter">.</span><span class="upperident">Node</span><span class="lowerident"> 
+listTaskView</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">tasks</span><span class="delimeter">,</span><span class="lowerident"> taskQuery</span><span class="kw"> -&gt;</span><span class="kw"> 
+    if</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">isEmpty</span><span class="lowerident"> tasks</span><span class="op"> &amp;&amp;</span><span class="upperident"> Str</span><span class="delimeter">.</span><span class="lowerident">isEmpty</span><span class="lowerident"> taskQuery</span><span class="kw"> then</span><span class="lowerident"> 
+        div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "alert alert-info mt-2"</span><span class="delimeter">,</span><span class="lowerident"> role</span><span class="literal"> "alert"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident"> text</span><span class="literal"> "Nil tasks, add a task to get started."</span><span class="delimeter"> ]</span><span class="kw">
+    else</span><span class="kw"> if</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">isEmpty</span><span class="lowerident"> tasks</span><span class="kw"> then</span><span class="lowerident"> 
+        div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "alert alert-info mt-2"</span><span class="delimeter">,</span><span class="lowerident"> role</span><span class="literal"> "alert"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident"> text</span><span class="literal"> "There are Nil tasks matching your query."</span><span class="delimeter"> ]</span><span class="kw">
+    else</span><span class="lowerident"> 
+
+        tableRows</span><span class="kw"> =</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="lowerident"> tasks</span><span class="kw"> \</span><span class="lowerident">task</span><span class="kw"> -&gt;</span><span class="lowerident">
+                
+            tr</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">
+                td</span><span class="delimeter"> [</span><span class="delimeter">(</span><span class="lowerident">attr</span><span class="literal"> "scope"</span><span class="delimeter">)</span><span class="literal"> "row"</span><span class="delimeter">,</span><span class="lowerident"> class</span><span class="literal"> "col-6"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">text</span><span class="lowerident"> task</span><span class="delimeter">.</span><span class="lowerident">task</span><span class="delimeter">]</span><span class="delimeter">,</span><span class="lowerident">
+                td</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "col-3 text-nowrap"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">text</span><span class="lowerident"> task</span><span class="delimeter">.</span><span class="lowerident">status</span><span class="delimeter">]</span><span class="delimeter">,</span><span class="lowerident">
+                td</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "col-3"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">
+                    div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "d-flex justify-content-center"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">
+                        a</span><span class="delimeter"> [</span><span class="lowerident"> 
+                            href</span><span class="literal"> ""</span><span class="delimeter">,</span><span class="lowerident"> 
+                            hxPost</span><span class="literal"> "/task/\(Num.toStr task.id)/delete"</span><span class="delimeter">,</span><span class="lowerident"> 
+                            hxTarget</span><span class="literal"> "#taskTable"</span><span class="delimeter">,</span><span class="delimeter">
+                            (</span><span class="lowerident">attr</span><span class="literal"> "aria-label"</span><span class="delimeter">)</span><span class="literal"> "delete task"</span><span class="delimeter">,</span><span class="delimeter">
+                            (</span><span class="lowerident">attr</span><span class="literal"> "style"</span><span class="delimeter">)</span><span class="literal"> "float: center;"</span><span class="delimeter">,</span><span class="delimeter">
+                        ]</span><span class="delimeter"> [</span><span class="delimeter">
+                            (</span><span class="lowerident">el</span><span class="literal"> "button"</span><span class="delimeter">)</span><span class="delimeter"> [</span><span class="delimeter">
+                                (</span><span class="lowerident">attr</span><span class="literal"> "type"</span><span class="delimeter">)</span><span class="literal"> "button"</span><span class="delimeter">,</span><span class="lowerident"> 
+                                class</span><span class="literal"> "btn btn-danger"</span><span class="delimeter">,</span><span class="delimeter">
+                            ]</span><span class="delimeter"> [</span><span class="lowerident">text</span><span class="literal"> "Delete"</span><span class="delimeter">]</span><span class="delimeter">,</span><span class="delimeter">
+                        ]</span><span class="delimeter">
+                    ]</span><span class="delimeter">,</span><span class="delimeter">
+                ]</span><span class="delimeter">,</span><span class="delimeter">
+            ]</span><span class="lowerident">
+
+        table</span><span class="delimeter"> [</span><span class="lowerident">
+            id</span><span class="literal"> "taskTable"</span><span class="delimeter">,</span><span class="lowerident">
+            class</span><span class="literal"> "table table-striped table-hover table-sm mt-2"</span><span class="delimeter">,</span><span class="delimeter">
+        ]</span><span class="delimeter"> [</span><span class="lowerident">
+            thead</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">
+                tr</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">
+                    th</span><span class="delimeter"> [</span><span class="delimeter">(</span><span class="lowerident">attr</span><span class="literal"> "scope"</span><span class="delimeter">)</span><span class="literal"> "col"</span><span class="delimeter">,</span><span class="lowerident"> class</span><span class="literal"> "col-6"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">text</span><span class="literal"> "Task"</span><span class="delimeter">]</span><span class="delimeter">,</span><span class="lowerident">
+                    th</span><span class="delimeter"> [</span><span class="delimeter">(</span><span class="lowerident">attr</span><span class="literal"> "scope"</span><span class="delimeter">)</span><span class="literal"> "col"</span><span class="delimeter">,</span><span class="lowerident"> class</span><span class="literal"> "col-3"</span><span class="delimeter">,</span><span class="delimeter"> (</span><span class="lowerident">attr</span><span class="literal"> "rowspan"</span><span class="delimeter">)</span><span class="literal"> "2"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">text</span><span class="literal"> "Status"</span><span class="delimeter">]</span><span class="delimeter">,</span><span class="delimeter">
+                ]</span><span class="delimeter">
+            ]</span><span class="delimeter">,</span><span class="lowerident">
+            tbody</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="lowerident"> tableRows</span><span class="delimeter">,</span><span class="delimeter">
+        ]</span></samp></pre>
+<h2>Future Ideas</h2>
+<p>This is my progress so far learning about Roc + htmx to build fullstack web apps. I will continue working on this as there are still plenty of other things I would like to learn.</p>
+<p>I would also like to:</p>
+<ul>
+<li>Modify to use PostgreSQL so that I can use this to help test <a href="https://github.com/agu-z/roc-pg">agu-z/roc-pg</a></li>
+<li>Modify to help test <a href="https://github.com/tweedegolf/nea">tweedegolf/nea</a> which aims to be a high performance webserver platform</li>
+<li>Build more functionality to explore htmx patterns further</li>
+</ul>
+<p>I hope you have enjoyed reading this. 🎉</p>
+<p>If you notice anything that could be improved or have any suggestions, please let me know 😎</p>
+</main><footer></footer></body></html>

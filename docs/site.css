@@ -10,6 +10,8 @@
     --violet-bg: #ece2fd;
     --magenta: #a20031;
 
+    --body-max-width: 900px;
+
     --link-color: var(--violet);
     --code-link-color: var(--violet);
     --text-color: #000;
@@ -102,7 +104,7 @@ code {
 }
 
 p code {
-    padding: 0 0px;
+    padding: 0 2px;
 }
 
 code a,

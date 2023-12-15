@@ -8,7 +8,8 @@ app "website"
 
 pageData =
     Dict.empty {}
-    |> Dict.insert "index.html" { title: "Home", description: "" }
+    |> Dict.insert "index.html" { title: "Luke Boswell", description: "Personal site for Luke Boswell" }
+    |> Dict.insert "roc-htmx-demo/index.html" { title: "Roc+htmx Demo", description: "An early exploration of Roc+htmx" }
 
 getPage : Str -> { title : Str, description : Str }
 getPage = \current ->

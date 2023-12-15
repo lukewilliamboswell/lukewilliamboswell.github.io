@@ -15,12 +15,8 @@ You can find me on [GitHub](https://github.com/lukewilliamboswell), or [LinkedIn
 - Programming languages roc, elm, rust, zig
 - Digital engineering, test & evaluation, model based system engineering  
 
-## Posts 
+## Posts
 
 I hope to write more about things I am learning...
 
 - [Fullstack Roc + htmx—an early exploration](/roc-htmx-demo) to build a full-stack web application
-
-## Publications
-
-- [ADF Journal: Cyber test and evaluation in a maritime context](https://www.defence.gov.au/research-innovation/research-publications/adf-journal-issue-202)
