@@ -1,15 +1,11 @@
 <!DOCTYPE html><html  lang="en" class="no-js"><head><meta  charset="utf-8"><title></title><meta  name="description" content=""><meta  name="viewport" content="width=device-width"><link  rel="stylesheet" href="/site.css"></head><body  id="index-page"><main><p><a href="/">Return to Home</a></p>
 <h1>Building a GUI platform - Action-State using <a href="https://www.raylib.com">raylib</a> and <a href="https://ziglang.org">zig</a></h1>
-<p><time class="post-date" datetime="2024-01-21">21 Jan 2024</time></p>
-<h2>TLDR</h2>
-<p>TODO</p>
-<h2 id="intro"><a href="#intro">Introduction</a></h2>
-<p>Richard Feldman has a draft <a href="https://docs.google.com/document/d/16qY4NGVOHu8mvInVD-ddTajZYSsFvFBvQON_hmyHGfo/edit?usp=sharing">Design Idea: Action-State</a> which outlines an idea to build User-Interfaces (UI) using Roc. The idea is similar to, but different from how UI are built in Elm with the <a href="https://guide.elm-lang.org/architecture/">The Elm Architecture (TEA)</a>. The design idea is tailored for plugin's. It has an <code>Init</code> and <code>Render</code> function, instead of the <code>Model</code>, <code>View</code>, <code>Update</code> found in TEA.</p>
+<p><time class="post-date" datetime="2024-01-21">21 Jan 2024</time> <em>~10 mins reading time</em></p>
+<p>Richard Feldman has a draft <a href="https://docs.google.com/document/d/16qY4NGVOHu8mvInVD-ddTajZYSsFvFBvQON_hmyHGfo/edit?usp=sharing">Design Idea: Action-State</a> which outlines an idea to build User-Interfaces (UI) using Roc. The idea is similar to, but different from how UI are built in Elm with <a href="https://guide.elm-lang.org/architecture/">The Elm Architecture (TEA)</a>. The design idea is tailored for plugins. It has an <code>Init</code> and <code>Render</code> function, instead of the <code>Model</code>, <code>View</code>, <code>Update</code> found in TEA.</p>
 <p>I have been wanting to explore this design, and after working on the <a href="https://github.com/lukewilliamboswell/roc-wasm4">roc-wasm4</a> zig platform with Brendan Hansknecht recently, I thought I might be able to get something working. </p>
-<p>This is my attempt to document that experience and share some of the things I have learnt about platform development along the way. The code isn't polished. There is still a lot more to learn about roc, zig, and platform development. However, I want to share what I have, flaws and all, so that others can benefit from this exploration.</p>
-<p>I'm still tinkering with different ideas, and maybe some day this platform can become useful for building cross-platform GUIs with roc. </p>
+<p>This is my attempt to document that experience and share some of the things I have learned about platform development along the way. The code isn't polished. There is still a lot more to learn about roc, zig, and platform development. However, I want to share what I have, flaws and all, so that others can benefit from this exploration.</p>
+<p>I'm still tinkering with different ideas, and maybe someday this platform can become useful for building cross-platform GUIs with roc. </p>
 <ul>
-<li><a href="#intro">Introduction</a></li>
 <li><a href="#goals">Goals</a></li>
 <li><a href="#demo">Demo</a></li>
 <li><a href="#step1">Step 1 minimal platform</a></li>
@@ -19,10 +15,10 @@
 <li><a href="#step4">Step 4 calling roc</a></li>
 <li><a href="#step5">Step 5 adding an effect</a></li>
 <li><a href="#step6">Step 6 roc &lt;-&gt; roc interface</a></li>
-<li><a href="#summary">Summary</a></li>
+<li><a href="#results">Results</a></li>
 <li><a href="#source">Source code</a></li>
 </ul>
-<p>P.S. if you're reading this and have any interest in writing a layout algorithm for GUI's in pure roc, then please let me know. That would make this platform really awesome!</p>
+<p>P.S. If you're reading this and have any interest in writing a layout algorithm for GUI's in pure roc, then please let me know. That would make this platform really awesome!</p>
 <h2 id="goals"><a href="#goals">Goals</a></h2>
 <ol>
 <li>Learn more about Roc, platform dev, and have some fun</li>
@@ -30,14 +26,14 @@
 <li>Implement the Action-State design idea</li>
 </ol>
 <h2 id="demo"><a href="#demo">Demo</a></h2>
-<p>The code for this demo is located at <a href="https://github.com/lukewilliamboswell/roc-ray/blob/main/examples/gui-counter.roc">github.com/lukewilliamboswell/roc-ray</a>. It includes a working implementation for the Counter example used in the Action-State design idea. The demo shows three counters in a window which can be independently modified and retain thier own state in the <code>Model</code>. User actions from cliking the buttons update the state of the <code>Model</code> using an <code>Action</code>.</p>
+<p>The code for this demo is located at <a href="https://github.com/lukewilliamboswell/roc-ray/blob/main/examples/gui-counter.roc">github.com/lukewilliamboswell/roc-ray</a>. It includes a working implementation for the Counter example used in the Action-State design idea. The demo shows three counters in a window that be independently modified and retain their own state in the <code>Model</code>. User actions from clicking the buttons update the state of the <code>Model</code> using an <code>Action</code>.</p>
 <p>To run this locally you need <a href="https://www.roc-lang.org">roc</a>, <a href="https://ziglang.org">zig</a> version 0.11.0, and <a href="https://www.raylib.com">raylib</a>.</p>
 <img class="demo-img" src="/roc-ray-experiment/demo.gif" alt="screen capture of the counter demo application being used"/>
 <h2 id="step1"><a href="#step1">Step 1 minimal platform</a></h2>
 <p>To get started, I copied and modified another platform to suit raylib. I combined different parts from <a href="https://github.com/lukewilliamboswell/roc-wasm4">roc-wasm4</a>, <a href="https://github.com/lukewilliamboswell/roc-zig-package-experiment">roc-zig-package-experiment</a>, and <a href="https://github.com/roc-lang/roc/tree/main/examples/platform-switching">roc-lang/platform-switching</a>. I wanted the API from roc-wasm and the implementation of e.g. <code>roc_alloc</code> and <code>roc_panic</code> from the platform-switching example.</p>
 <p>I want the experience for application authors using this platform to be as simple as <code>roc run</code>. To do this I need the platform to generate the pre-built files e.g. <code>macos-arm64.a</code> using the <code>build.zig</code> script. I can then package the platform into a URL using <code>roc build --bundle .tar.br platform/main.roc</code>. This packages the platform roc API source code along with the pre-built binaries for each supported architecture.</p>
-<p>Cross-compiling for different architectures using zig is easy, so my hope is that including raylib and necessary dependencies in this platform will also be easy to build a static library. Then when running an application that targets the platform from a URL roc will automatically use the prebuilt-binary for that platform, and there is no need for application authors to have the zig toolchain installed.</p>
-<p>However, while developing the platform or to run an example locally, the platform is built separately from the roc application. I instruct the roc cli to use the prebuilt-platform binary by using a relative path e.g. <code>packages { ray: "../platform/main.roc" }</code>, and then <code>roc dev --prebuilt-platform example.roc</code>.</p>
+<p>Cross-compiling for different architectures using zig is easy, so my hope is that including raylib and necessary dependencies in this platform will also make it easy to build a static library. Then when running an application that targets the platform from a URL roc will automatically use the prebuilt-binary for that platform, and there is no need for application authors to have the zig toolchain installed.</p>
+<p>However, while developing the platform or running an example locally, the platform is built separately from the roc application. I instruct the roc cli to use the prebuilt-platform binary by using a relative path e.g. <code>packages { ray: "../platform/main.roc" }</code>, and then <code>roc dev --prebuilt-platform example.roc</code>.</p>
 <p>To keep things simple I chose not to include raylib or call into roc from zig. The main function in <code>platform/host.zig</code> just printed &quot;hello,world&quot; to stdio which was enough to test the platform built correctly, that roc was able to link against it, and that everything ran without any issues.</p>
 <h2 id="step2"><a href="#step2">Step 2 raylib library</a></h2>
 <p>Next, I followed the instructions in <a href="https://github.com/ryupold/raylib.zig">https://github.com/ryupold/raylib.zig</a> to add raylib to the platform and implement the example from the README.</p>
@@ -70,7 +66,7 @@ pub fn <span class="meta function c"><span class="entity name function c">main</
 </span></pre></samp>
 <p>The roc app and platform API weren't doing anything useful at this stage. I had a script to build my platform into a static library. Roc could build the app and link it with the platform. The app displayed the raylib example in a window. However, the host wasn't actually calling into roc.</p>
 <h2 id="step3"><a href="#step3">Step 3 roc &lt;-&gt; host interface</a></h2>
-<p>I did't need to change <code>platform/main.roc</code> and the implementation for <code>mainForHost</code> in particular. By leaving the roc-host interface as it was, I re-purposed the implementation for calling into roc in <code>platform/host.zig</code>.</p>
+<p>I didn't need to change <code>platform/main.roc</code> and the implementation for <code>mainForHost</code> in particular. By leaving the roc-host interface as it was, I re-purposed the implementation for calling into roc in <code>platform/host.zig</code>.</p>
 <p>The host will call <code>roc__mainForHost_1_exposed_generic</code> which is generated by roc and returns a struct containing two functions <code>init</code> and <code>update</code>. This is defined in <code>platform/main.roc</code> and represents the interface between roc and the host.</p>
 <p><em>Note the design for platforms is currently evolving, so how this is done in future may change significantly.</em></p>
 <pre><samp><span class="upperident">ProgramForHost</span><span class="kw"> :</span><span class="delimeter"> {</span><span class="lowerident">
@@ -81,10 +77,10 @@ pub fn <span class="meta function c"><span class="entity name function c">main</
 mainForHost</span><span class="kw"> :</span><span class="upperident"> ProgramForHost</span><span class="lowerident">
 mainForHost</span><span class="kw"> =</span><span class="delimeter"> {</span><span class="lowerident"> init</span><span class="delimeter">,</span><span class="lowerident"> update</span><span class="delimeter"> }</span></samp></pre>
 <p>Both of the functions in <code>ProgramForHost</code> provide a boxed representation of the app's <code>Model</code> to the host. Boxing the model stores the <code>Model</code> on the heap which enables roc to provide the host with an opaque pointer to the the <code>Model</code>. </p>
-<p>The platform is unable to know the size or shape of <code>Model</code>, as this is defined in the application and provided to the platform. The host receives a pointer to a <code>Model</code> by calling <code>init</code>, which it can then pass back to roc in a future call to <code>update</code>. This is how a roc application is able to retain state between calls.</p>
+<p>The platform is unable to know the size or shape of <code>Model</code>, as this is defined in the application and provided to the platform. The host receives a pointer to a <code>Model</code> by calling <code>init</code>, which it can then pass back to roc in a future call to <code>update</code>. This is how a roc application is able to retain the state between calls.</p>
 <h2 id="glue-llvm"><a href="#glue-llvm">Glue &amp; LLVM IR</a></h2>
-<p>In future platform authors will use <code>roc glue</code> to generate all of the relevant types and glue code for thier platform, including the roc builtins (or standard library). However this feature is still in development and there isn't a glue-spec written for zig yet.</p>
-<p>So, in the interim it is useful to know that roc can generate the LLVM IR representation for a platform by running e.g. <code>roc build --emit-llvm-ir --no-link examples/gui-counter.roc</code>. This produces a <code>gui-counter.ll</code> file which contains the IR for the appplication and platform without the host.</p>
+<p>In the future platform authors will use <code>roc glue</code> to generate all of the relevant types and glue code for their platform, including the roc builtins (or standard library). However, this feature is still in development and there isn't a glue-spec written for zig yet.</p>
+<p>So, in the interim, it is useful to know that roc can generate the LLVM IR representation for a platform by running e.g. <code>roc build --emit-llvm-ir --no-link examples/gui-counter.roc</code>. This produces a <code>gui-counter.ll</code> file which contains the IR for the application and platform without the host.</p>
 <p>For example, the generated LLVM IR for <code>roc__mainForHost_1_exposed_generic</code> is:</p>
 <pre><samp><span class="source c">define <span class="storage type c">void</span> @<span class="meta function-call c"><span class="variable function c">roc__mainForHost_1_exposed_generic</span><span class="meta group c"><span class="punctuation section group begin c">(</span></span></span><span class="meta function-call c"><span class="meta group c">ptr <span class="keyword operator arithmetic c">%</span><span class="constant numeric c">0</span></span></span><span class="meta function-call c"><span class="meta group c"><span class="punctuation section group end c">)</span></span></span> <span class="keyword operator arithmetic c">!</span>dbg <span class="keyword operator arithmetic c">!</span><span class="constant numeric c">667</span> <span class="meta block c"><span class="punctuation section block begin c">{</span>
 <span class="entity name label c">entry</span><span class="punctuation separator c">:</span>
@@ -117,19 +113,19 @@ var update_captures <span class="keyword operator assignment c">=</span> <span c
 </span><span class="meta function-call c"><span class="variable function c">roc__mainForHost_1_caller</span><span class="meta group c"><span class="punctuation section group begin c">(</span></span></span><span class="meta function-call c"><span class="meta group c"><span class="keyword operator c">&amp;</span>model<span class="punctuation separator c">,</span> undefined<span class="punctuation separator c">,</span> update_captures</span><span class="meta group c"><span class="punctuation section group end c">)</span></span></span><span class="punctuation terminator c">;</span>
 <span class="meta function-call c"><span class="variable function c">roc__mainForHost_2_caller</span><span class="meta group c"><span class="punctuation section group begin c">(</span></span></span><span class="meta function-call c"><span class="meta group c">undefined<span class="punctuation separator c">,</span> update_captures<span class="punctuation separator c">,</span> <span class="keyword operator c">&amp;</span>model</span><span class="meta group c"><span class="punctuation section group end c">)</span></span></span><span class="punctuation terminator c">;</span>
 </span></pre></samp>
-<p>I only have a surface level appreciation for how this works, so I am not going to try and explain it any further here. However I have always found people in the begineer channel on roc zulip to be friendly and helpful whenever I ask any questions. </p>
+<p>I only have a surface-level appreciation for how this works, so I am not going to try and explain it any further here. However, I have always found people in the beginner channel on roc zulip to be friendly and helpful whenever I ask any questions. </p>
 <p>Thank you again to Brendan Hansknecht for helping me with this implementation. </p>
 <h2 id="step5"><a href="#step5">Step 5 adding an effect</a></h2>
 <p>To confirm roc was being called correctly, and that it could work with raylib I needed an <code>Effect</code>. </p>
 <p>I chose to give roc the ability to set the window size, as this looked relatively simple to implement. So, first I added the effect in the platform. </p>
-<p>From an application authors perspective this looks like a function which returns a <code>Task</code> that cannot fail and returns the empty <code>{}</code> value. This is how it is used in the demo application.</p>
+<p>From an application author's perspective, this looks like a function that returns a <code>Task</code> that cannot fail and returns the empty <code>{}</code> value. This is how it is used in the demo application.</p>
 <pre><samp><span class="lowerident">init</span><span class="kw"> :</span><span class="upperident"> Task</span><span class="upperident"> Model</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="lowerident">
 init</span><span class="kw"> =</span><span class="delimeter">
 
     {</span><span class="delimeter">}</span><span class="kw"> &lt;-</span><span class="upperident"> Core</span><span class="delimeter">.</span><span class="lowerident">setWindowSize</span><span class="delimeter"> {</span><span class="lowerident"> width</span><span class="delimeter">,</span><span class="lowerident"> height</span><span class="delimeter"> }</span><span class="kw"> |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">await</span><span class="comment">
 
     # ... </span></samp></pre>
-<p>Within the platform this is implemented using an <code>Effect</code>.</p>
+<p>Within the platform, this is implemented using an <code>Effect</code>.</p>
 <pre><samp><span class="comment"># platform/Effect.roc</span><span class="lowerident">
 setWindowSize</span><span class="kw"> :</span><span class="upperident"> I32</span><span class="delimeter">,</span><span class="upperident"> I32</span><span class="kw"> -&gt;</span><span class="upperident"> Effect</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="comment">
 
@@ -139,13 +135,13 @@ setWindowSize</span><span class="kw"> =</span><span class="kw"> \</span><span cl
     Effect</span><span class="delimeter">.</span><span class="lowerident">setWindowSize</span><span class="delimeter"> (</span><span class="upperident">Num</span><span class="delimeter">.</span><span class="lowerident">round</span><span class="lowerident"> width</span><span class="delimeter">)</span><span class="delimeter"> (</span><span class="upperident">Num</span><span class="delimeter">.</span><span class="lowerident">round</span><span class="lowerident"> height</span><span class="delimeter">)</span><span class="kw">
     |&gt;</span><span class="upperident"> Effect</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="upperident"> Ok</span><span class="kw">
     |&gt;</span><span class="upperident"> InternalTask</span><span class="delimeter">.</span><span class="lowerident">fromEffect</span></samp></pre>
-<p><em>Note here that the host recieves two <code>I32</code> values which is what raylib requires. However, for application authors I have exposed an API that expects two <code>F32</code> in a record. My hypothesis is that a record will be more explicit for what these arguments do, and <code>F32</code>'s will simplify using these values across the app without having a lot of calls to <code>Num.toI32</code> or <code>Num.toF32</code>.</em></p>
-<p>And finally, this Effect is implemented in <code>platform/host.zig</code> so that roc will link against this and can call this function in the host.</p>
+<p><em>Note here that the host receives two <code>I32</code> values which is what raylib requires. However, for application authors, I have exposed an API that expects two <code>F32</code> in a record. My hypothesis is that a record will be more explicit for what these arguments do, and <code>F32</code>'s will simplify using these values across the app without having a lot of calls to <code>Num.toI32</code> or <code>Num.toF32</code>.</em></p>
+<p>Finally, this Effect is implemented in <code>platform/host.zig</code> so that roc will link against this and can call this function in the host.</p>
 <pre><samp><span class="source c">export fn <span class="meta function c"><span class="entity name function c">roc_fx_setWindowSize</span></span><span class="meta function parameters c"><span class="meta group c"><span class="punctuation section group begin c">(</span></span></span><span class="meta function parameters c"><span class="meta group c">width<span class="keyword operator ternary c">:</span> <span class="variable parameter c">i32</span><span class="punctuation separator c">,</span> height<span class="keyword operator ternary c">:</span> <span class="variable parameter c">i32</span><span class="punctuation section group end c">)</span></span></span><span class="meta function c"> </span><span class="meta function-call c"><span class="variable function c">callconv</span><span class="meta group c"><span class="punctuation section group begin c">(</span></span></span><span class="meta function-call c"><span class="meta group c"><span class="punctuation accessor c">.</span><span class="variable other member c">C</span></span></span><span class="meta function-call c"><span class="meta group c"><span class="punctuation section group end c">)</span></span></span> <span class="storage type c">void</span> <span class="meta block c"><span class="punctuation section block begin c">{</span>
     raylib<span class="punctuation accessor c">.</span><span class="meta function-call c"><span class="variable function c">SetWindowSize</span><span class="meta group c"><span class="punctuation section group begin c">(</span></span></span><span class="meta function-call c"><span class="meta group c">width<span class="punctuation separator c">,</span> height</span></span><span class="meta function-call c"><span class="meta group c"><span class="punctuation section group end c">)</span></span></span><span class="punctuation terminator c">;</span>
 <span class="punctuation section block end c">}</span></span>
 </span></pre></samp>
-<p>This is how roc will call into the host. Note that the host first calls into roc with <code>init</code>or <code>update</code>, and then these <code>Effect</code>s provide an interface for roc to call back into the host for impure operations like writing to a file, or requesting a change in window size.</p>
+<p>This is how roc will call into the host. Note that the host first calls into roc with <code>init</code> or <code>update</code>, and then these <code>Effect</code>s enable roc to call back into the host for impure operations like writing to a file, or requesting a change in window size.</p>
 <h2 id="step6"><a href="#step6">Step 6 roc &lt;-&gt; roc interface</a></h2>
 <p>The app provides two functions <code>init</code> and <code>render</code> to the platform. These both return a <code>Task Model []</code> that provides the <code>Model</code> to be used in the next update.</p>
 <p>In the demo application this is implemented as follows:</p>
@@ -194,7 +190,7 @@ update</span><span class="kw"> =</span><span class="kw"> \</span><span class="lo
     |&gt;</span><span class="lowerident"> main</span><span class="delimeter">.</span><span class="lowerident">render</span><span class="kw">
     |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="upperident"> Box</span><span class="delimeter">.</span><span class="lowerident">box</span></samp></pre>
 <p>Note the model is unboxed and then boxed when calling the <code>render</code> provided by the application.</p>
-<h2 id="summary"><a href="#summary">Summary</a></h2>
+<h2 id="results"><a href="#results">Results</a></h2>
 <ol>
 <li>Learn more about Roc, platform dev, and have some fun</li>
 </ol>
@@ -247,7 +243,7 @@ init</span><span class="kw"> =</span><span class="delimeter">
 render</span><span class="kw"> :</span><span class="upperident"> Model</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="upperident"> Model</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="lowerident">
 render</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">model</span><span class="kw"> -&gt;</span><span class="comment">
 
-    # this is temporary workaround for a bug `Error in alias analysis: error in module...`</span><span class="comment">
+    # this is a temporary workaround for a bug `Error in alias analysis: error in module...`</span><span class="comment">
     # sometimes we need an extra Task in the chain to prevent this error</span><span class="lowerident">
     _</span><span class="kw"> &lt;-</span><span class="upperident"> Core</span><span class="delimeter">.</span><span class="lowerident">getMousePosition</span><span class="kw"> |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">await</span><span class="upperident">
     
