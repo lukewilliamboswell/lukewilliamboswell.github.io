@@ -4,7 +4,11 @@
 
 <time class="post-date" datetime="2024-01-21">21 Jan 2024</time>
 
-*Source code at [https://github.com/lukewilliamboswell/roc-ray](https://github.com/lukewilliamboswell/roc-ray)*
+## TLDR
+
+TODO
+
+## [Introduction](#intro) {#intro}
 
 Richard Feldman has a draft [Design Idea: Action-State](https://docs.google.com/document/d/16qY4NGVOHu8mvInVD-ddTajZYSsFvFBvQON_hmyHGfo/edit?usp=sharing) which outlines an idea to build User-Interfaces (UI) using Roc. The idea is similar to, but different from how UI are built in Elm with the [The Elm Architecture (TEA)](https://guide.elm-lang.org/architecture/). The design idea is tailored for plugin's. It has an `Init` and `Render` function, instead of the `Model`, `View`, `Update` found in TEA.
 
@@ -12,25 +16,30 @@ I have been wanting to explore this design, and after working on the [roc-wasm4]
 
 This is my attempt to document that experience and share some of the things I have learnt about platform development along the way. The code isn't polished. There is still a lot more to learn about roc, zig, and platform development. However, I want to share what I have, flaws and all, so that others can benefit from this exploration.
 
-I'm still tinkering with different ideas, and maybe some day this platform can become really useful for building cross-platform GUIs with roc. 
+I'm still tinkering with different ideas, and maybe some day this platform can become useful for building cross-platform GUIs with roc. 
 
-P.S. if you're reading this and have any interest in writing a layout algorithm for GUI's in pure roc, then please let me know. That would make this platform really awesome! 
+- [Introduction](#intro)
+- [Goals](#goals)
+- [Demo](#demo)
+- [Step 1 minimal platform](#step1)
+- [Step 2 raylib library](#step2)
+- [Step 3 roc <-> host interface](#step3)
+- [Glue & LLVM IR](#glue-llvm)
+- [Step 4 calling roc](#step4)
+- [Step 5 adding an effect](#step5)
+- [Step 6 roc <-> roc interface](#step6)
+- [Summary](#summary)
+- [Source code](#source)
 
-## Goals
+P.S. if you're reading this and have any interest in writing a layout algorithm for GUI's in pure roc, then please let me know. That would make this platform really awesome!
+
+## [Goals](#goals) {#goals}
 
 1. Learn more about Roc, platform dev, and have some fun
-
-With this exper
-
 2. Implement a [zig](https://ziglang.org) platform that uses [raylib](https://www.raylib.com) for graphics
-
-asdf
-
 3. Implement the Action-State design idea
 
-The platform is minimal, with only the features needed for the demo implemented.
-
-## Demo
+## [Demo](#demo) {#demo}
 
 The code for this demo is located at [github.com/lukewilliamboswell/roc-ray](https://github.com/lukewilliamboswell/roc-ray/blob/main/examples/gui-counter.roc). It includes a working implementation for the Counter example used in the Action-State design idea. The demo shows three counters in a window which can be independently modified and retain thier own state in the `Model`. User actions from cliking the buttons update the state of the `Model` using an `Action`.
 
@@ -38,25 +47,23 @@ To run this locally you need [roc](https://www.roc-lang.org), [zig](https://zigl
 
 <img class="demo-img" src="/roc-ray-experiment/demo.gif" alt="screen capture of the counter demo application being used"/>
 
-## Step 1 Minimal platform
+## [Step 1 minimal platform](#step1) {#step1}
 
-To get started, I copied across another implementation and modified parts as needed. There wasn't a platform with the exact form I needed, but by combining different parts of [roc-wasm4](https://github.com/lukewilliamboswell/roc-wasm4), [roc-zig-package-experiment](https://github.com/lukewilliamboswell/roc-zig-package-experiment), and [roc-lang/platform-switching](https://github.com/roc-lang/roc/tree/main/examples/platform-switching) I was able to get something minimal working. I wanted the API from roc-wasm and the implementation of e.g. `roc_alloc` and `roc_panic` from the platform-switching example.
+To get started, I copied and modified another platform to suit raylib. I combined different parts from [roc-wasm4](https://github.com/lukewilliamboswell/roc-wasm4), [roc-zig-package-experiment](https://github.com/lukewilliamboswell/roc-zig-package-experiment), and [roc-lang/platform-switching](https://github.com/roc-lang/roc/tree/main/examples/platform-switching). I wanted the API from roc-wasm and the implementation of e.g. `roc_alloc` and `roc_panic` from the platform-switching example.
 
-My aim here was to have a platform that uses `build.zig` to generate the pre-built files e.g. `macos-arm64.a`, so that I can package the platform into a URL. This would mean that the experience for end users when building applications using this platform would be as simple as `roc run`. 
+I want the experience for application authors using this platform to be as simple as `roc run`. To do this I need the platform to generate the pre-built files e.g. `macos-arm64.a` using the `build.zig` script. I can then package the platform into a URL using `roc build --bundle .tar.br platform/main.roc`. This packages the platform roc API source code along with the pre-built binaries for each supported architecture.
 
-Cross-compiling for different architectures using zig is easy, so my hope is that including raylib and necessary dependencies in this platform will also be easy to build a static library. Then when running an application that targets the platform from a URL roc will automatically use the prebuilt-binary for that platform, and there is no need for application authors to have the host (zig) toolchain, and raylib installed.
+Cross-compiling for different architectures using zig is easy, so my hope is that including raylib and necessary dependencies in this platform will also be easy to build a static library. Then when running an application that targets the platform from a URL roc will automatically use the prebuilt-binary for that platform, and there is no need for application authors to have the zig toolchain installed.
 
-To run an app locally, such as while developing the platform or one of the examples, I use a relative path like `packages { ray: "../platform/main.roc" }`, and then use `roc dev --prebuilt-platform example.roc`. This instructs the roc cli to use the prebuilt-platform binary in the platform. This is needed, as the platform is built separately from the roc application.
+However, while developing the platform or to run an example locally, the platform is built separately from the roc application. I instruct the roc cli to use the prebuilt-platform binary by using a relative path e.g. `packages { ray: "../platform/main.roc" }`, and then `roc dev --prebuilt-platform example.roc`.
 
-For the first step when developing the platform, I chose not to include raylib, or call into roc from zig so as to keep things simple. The zig `pub fn main() void` function at this stage just printed "hello,world" to stdio, which was enough to verify the program was running as expected. 
+To keep things simple I chose not to include raylib or call into roc from zig. The main function in `platform/host.zig` just printed "hello,world" to stdio which was enough to test the platform built correctly, that roc was able to link against it, and that everything ran without any issues.
 
-I wanted to confirm the platform built correctly, and that roc was able to link against it.
+## [Step 2 raylib library](#step2) {#step2}
 
-## Step 2 raylib library
+Next, I followed the instructions in [https://github.com/ryupold/raylib.zig](https://github.com/ryupold/raylib.zig) to add raylib to the platform and implement the example from the README.
 
-I followed the instructions in [https://github.com/ryupold/raylib.zig](https://github.com/ryupold/raylib.zig) to add raylib to the platform and implement the example from the README.
-
-I updated `build.zig` and made minor changes so the libraries would build and link with roc. The zig `pub fn main() void` was updated to the raylib example. It didn't call into roc at this stage. 
+I updated `build.zig` and made minor changes so the libraries would build and link with roc. The main function in `platform/host.zig` was updated with the raylib example. It still didn't call into roc at this stage. 
 
 I wasn't able to get this working on my own, so I reached out to Brendan Hansknecht, who provided assistance with linking and missing symbols.
 
@@ -90,13 +97,13 @@ pub fn main() void {
 
 The roc app and platform API weren't doing anything useful at this stage. I had a script to build my platform into a static library. Roc could build the app and link it with the platform. The app displayed the raylib example in a window. However, the host wasn't actually calling into roc.
 
-## Step 3 Roc <-> Host interface
+## [Step 3 roc <-> host interface](#step3) {#step3}
 
-I did't need to change `platform/main.roc` and the implementation for `mainForHost` in particular. By leaving the roc-host interface as it was, I could also re-purpose the implementation for calling into roc in the `platform/host.zig`.
+I did't need to change `platform/main.roc` and the implementation for `mainForHost` in particular. By leaving the roc-host interface as it was, I re-purposed the implementation for calling into roc in `platform/host.zig`.
 
-When the zig calls the `roc__mainForHost_1_exposed_generic` generated by roc, it returns a struct containing two functions `init` and `update`. This is defined in `platform/main.roc` and represents the interface between roc and the host. 
+The host will call `roc__mainForHost_1_exposed_generic` which is generated by roc and returns a struct containing two functions `init` and `update`. This is defined in `platform/main.roc` and represents the interface between roc and the host.
 
-Note that the design for platforms is currently evolving, so how this is done in future may change significantly.
+*Note the design for platforms is currently evolving, so how this is done in future may change significantly.*
 
 ```roc
 ProgramForHost : {
@@ -108,15 +115,15 @@ mainForHost : ProgramForHost
 mainForHost = { init, update }
 ```
 
-Both of the functions in the `ProgramForHost` provide a boxed representation of the app's `Model` to the host. Boxing the model stores the `Model` on the heap which enables roc to provide the host with an opaque pointer to the the `Model`. 
+Both of the functions in `ProgramForHost` provide a boxed representation of the app's `Model` to the host. Boxing the model stores the `Model` on the heap which enables roc to provide the host with an opaque pointer to the the `Model`. 
 
-The platform is unable to know what the size or shape of the `Model` will be, as this is defined in the roc application and provided to the platform. The host receives a pointer to a `Model` by calling `init`, which it can then pass back to roc in a future call to `update`. This is how a roc application is able to retain state between calls.  
+The platform is unable to know the size or shape of `Model`, as this is defined in the application and provided to the platform. The host receives a pointer to a `Model` by calling `init`, which it can then pass back to roc in a future call to `update`. This is how a roc application is able to retain state between calls.  
 
-## Aside Glue & LLVM IR
+## [Glue & LLVM IR](#glue-llvm) {#glue-llvm}
 
-In future platform authors will use `roc glue` to generate all of the relevant types and glue code for thier platform roc API and the roc builtins (standard library). However this feature is still in development and there isn't a glue-spec written for zig yet.
+In future platform authors will use `roc glue` to generate all of the relevant types and glue code for thier platform, including the roc builtins (or standard library). However this feature is still in development and there isn't a glue-spec written for zig yet.
 
-It is useful to know that roc can generate the LLVM IR representation for a platform by running e.g. `roc build --emit-llvm-ir --no-link examples/gui-counter.roc`. This produces a `gui-counter.ll` file which contains the IR for the appplication and platform without the host `--no-link`. 
+So, in the interim it is useful to know that roc can generate the LLVM IR representation for a platform by running e.g. `roc build --emit-llvm-ir --no-link examples/gui-counter.roc`. This produces a `gui-counter.ll` file which contains the IR for the appplication and platform without the host.
 
 For example, the generated LLVM IR for `roc__mainForHost_1_exposed_generic` is:
 
@@ -137,11 +144,12 @@ extern fn roc__mainForHost_1_exposed_generic(*anyopaque) callconv(.C) void;
 
 By inspecting the LLVM IR I could sometimes find useful information to assist with platform implementation.
 
-## Step 4 Calling Roc
+## [Step 4 calling roc](#step4) {#step4}
  
-The implementation in to call roc from `host.zig` was implemented as follows:
+The implementation to call roc in `platform/host.zig` was implemented as follows:
 
 ```c
+// MODEL
 var model: *anyopaque = undefined;
 
 // INIT ROC
@@ -160,11 +168,28 @@ roc__mainForHost_1_caller(&model, undefined, update_captures);
 roc__mainForHost_2_caller(undefined, update_captures, &model);
 ```
 
-I have a surface level appreciation for how this works, so I am not going to try and explain it any further here. However I have always found people to be friendly and helpful when I ask questions in the begineer channel on roc zulip. Thank you again to Brendan Hansknecht for helping with this. 
+I only have a surface level appreciation for how this works, so I am not going to try and explain it any further here. However I have always found people in the begineer channel on roc zulip to be friendly and helpful whenever I ask any questions. 
 
-## Step 5 Adding a single Effect
+Thank you again to Brendan Hansknecht for helping me with this implementation. 
 
-To confirm roc was being called correctly, and that it could effect raylib I needed an effect. I chose to enable roc to set the window size, as this looked relatively simple to implement. So, first I added the effect in the platform.
+## [Step 5 adding an effect](#step5) {#step5}
+
+To confirm roc was being called correctly, and that it could work with raylib I needed an `Effect`. 
+
+I chose to give roc the ability to set the window size, as this looked relatively simple to implement. So, first I added the effect in the platform. 
+
+From an application authors perspective this looks like a function which returns a `Task` that cannot fail and returns the empty `{}` value. This is how it is used in the demo application.
+
+```roc
+init : Task Model []
+init =
+
+    {} <- Core.setWindowSize { width, height } |> Task.await
+
+    # ... 
+```
+
+Within the platform this is implemented using an `Effect`.
 
 ```roc 
 # platform/Effect.roc
@@ -178,7 +203,9 @@ setWindowSize = \{ width, height } ->
     |> InternalTask.fromEffect
 ```
 
-And finally, in the `host.zig`.
+*Note here that the host recieves two `I32` values which is what raylib requires. However, for application authors I have exposed an API that expects two `F32` in a record. My hypothesis is that a record will be more explicit for what these arguments do, and `F32`'s will simplify using these values across the app without having a lot of calls to `Num.toI32` or `Num.toF32`.*
+
+And finally, this Effect is implemented in `platform/host.zig` so that roc will link against this and can call this function in the host.
 
 ```c
 export fn roc_fx_setWindowSize(width: i32, height: i32) callconv(.C) void {
@@ -186,17 +213,44 @@ export fn roc_fx_setWindowSize(width: i32, height: i32) callconv(.C) void {
 }
 ```
 
-## Step 6 Roc <-> Roc interface
+This is how roc will call into the host. Note that the host first calls into roc with `init`or `update`, and then these `Effect`s enable roc to call back into the host for impure operations like writing to a file, or requesting a change in window size.
+
+## [Step 6 roc <-> roc interface](#step6) {#step6}
+
+The app provides two functions `init` and `render` to the platform. These both return a `Task Model []` that provides the `Model` to be used in the next update.
+
+In the demo application this is implemented as follows:
 
 ```roc
-platform "roc-ray"
-    # due to a bug we cannot export `Program` here but use `_` instead
-    requires { Model } { main : _ } 
-    exposes [Core, GUI, Action, Task]
-    packages {}
-    imports [Task.{ Task }]
-    provides [mainForHost]
+# examples/gui-counter.roc
+app "counter"
+    # ...
+    provides [main, Model] to ray # from application to platform
 
+# the application's state
+Model : { left : Counter, middle : Counter, right : Counter }
+
+# to the platform
+main : Program Model
+main = { init, render }
+
+# returns a Model and does not fail 
+init : Task Model []
+
+# takes a Model and returns a new Model
+render : Model -> Task Model []
+```
+
+Recall from earlier that the interface with the host, `ProgramForHost`, provides a boxed representation of the app's `Model`. This is achieved within the platform by transforming the `init` and `update` provided by the application as follows: 
+
+```roc
+# platform/main.roc
+platform "roc-ray"
+    requires { Model } { main : Program Model } # from application
+    # ...
+    provides [mainForHost] # to host
+
+# interface with the host
 ProgramForHost : {
     init : Task (Box Model) [],
     update : Box Model -> Task (Box Model) [],
@@ -205,9 +259,11 @@ ProgramForHost : {
 mainForHost : ProgramForHost
 mainForHost = { init, update }
 
+# transform main.init provided by the application
 init : Task (Box Model) []
 init = main.init |> Task.map Box.box
 
+# transform main.render provided by the application
 update : Box Model -> Task (Box Model) []
 update = \boxedModel ->
     boxedModel
@@ -216,49 +272,29 @@ update = \boxedModel ->
     |> Task.map Box.box
 ```
 
-The app provides two functions `init` and `render` to the platform. These both return a `Task Model []` that provides the `Model` to be passed to the next frame. The raylib platform 
+Note the model is unboxed and then boxed when calling the `render` provided by the application.
 
-```c
-pub fn main() void {
+## [Summary](#summary) {#summary}
 
-    // SETUP WINDOW 
-    // ...
+1. Learn more about Roc, platform dev, and have some fun
 
-    // CALL ROC INIT 
-    // ...
+TODO
 
-    // RUN WINDOW FRAME LOOP
-    while (!raylib.WindowShouldClose() and !should_exit) {
-        raylib.BeginDrawing();
-        defer raylib.EndDrawing();
+2. Implement a [zig](https://ziglang.org) platform that uses [raylib](https://www.raylib.com) for graphics
 
-        raylib.ClearBackground(raylib.BLACK);
+TODO
 
-        // CALL ROC UPDATE
-        roc__mainForHost_1_caller(&model, undefined, update_captures);
-        roc__mainForHost_2_caller(undefined, update_captures, &model);
+3. Implement the Action-State design idea
 
-        // ...
-    }
+TODO 
 
-    // CLEANUP
-    // ...
-}
-```
+The platform is minimal, with only the features needed for the demo implemented.
 
- so that the application can execute effects like 
-reading a file* before returning the modal to use for rendering the screen
+## [Source code](#source) {#source}
 
-```roc
-Program : {
-    init : Task Model [],
-    render : Model -> Task Model [],
-}
-```
+*full source code at [https://github.com/lukewilliamboswell/roc-ray](https://github.com/lukewilliamboswell/roc-ray)*
 
-## Application Code
-
-Below is a copy of the source at the time of writing.
+Below is a copy of the demo application at the time of writing.
 
 ```roc
 # gui-counter.roc
@@ -267,7 +303,7 @@ app "counter"
     imports [
         ray.Task.{ Task },
         ray.Action.{ Action },
-        ray.Core.{ Color, Rectangle },
+        ray.Core.{ Program, Color, Rectangle },
         ray.GUI.{ Elem },
         Counter.{ Counter },
     ]
@@ -279,19 +315,14 @@ Model : {
     right : Counter,
 }
 
-Program : {
-    init : Task Model [],
-    render : Model -> Task Model [],
-}
-
-main : Program
+main : Program Model
 main = { init, render }
 
 init : Task Model []
 init =
 
     {} <- Core.setWindowSize { width, height } |> Task.await
-    {} <- Core.setWindowTitle "GUI Counter Demo" |> Task.await
+    {} <- Core.setWindowTitle "GUI Counter demo" |> Task.await
 
     Task.ok {
         left: Counter.init 10,

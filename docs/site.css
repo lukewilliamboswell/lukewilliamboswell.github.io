@@ -243,3 +243,38 @@ ul.links li a {
 ul.links li a:hover {
     background-color: var(--code-bg);
 }
+
+
+.source.c {
+    color: var(--blue); /* General color for source code */
+}
+
+.storage.type.c {
+    color: var(--cyan); /* Style for storage types, like 'void' */
+}
+
+.meta.function-call.c, .meta.block.c {
+    color: var(--text-color); /* Style for function calls and blocks */
+}
+
+.variable.function.c {
+    color: var(--violet); /* Style for function variables */
+}
+
+.keyword.operator.arithmetic.c, .keyword.operator.assignment.c {
+    color: var(--orange); /* Style for operators */
+}
+
+.constant.numeric.c {
+    color: var(--cyan); /* Style for numeric constants */
+}
+
+.punctuation.section.group.begin.c, .punctuation.section.group.end.c,
+.punctuation.section.block.begin.c, .punctuation.section.block.end.c,
+.punctuation.separator.c {
+    color: var(--blue); /* Style for punctuation */
+}
+
+.entity.name.label.c {
+    color: var(--green) /* Style for labels like 'entry' */
+}
