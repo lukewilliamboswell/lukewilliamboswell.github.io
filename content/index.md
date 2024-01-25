@@ -19,4 +19,5 @@ You can find me on [GitHub](https://github.com/lukewilliamboswell), or [LinkedIn
 
 I hope to write more about things I am learning...
 
-- [Fullstack Roc + htmx—an early exploration](/roc-htmx-demo) to build a full-stack web application
+- *25 Jan 2024* [Building a GUI platform—Action-State using zig and raylib](/roc-ray-experiment) to explore platform development 
+- *15 Dec 2023* [Fullstack Roc + htmx—an early exploration](/roc-htmx-demo) to build a full-stack web application
