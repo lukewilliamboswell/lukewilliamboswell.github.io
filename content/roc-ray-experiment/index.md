@@ -40,7 +40,7 @@ These are the steps I cover in this article.
 
 ## [Demo](#demo) {#demo}
 
-The code for this demo is located at [github.com/lukewilliamboswell/roc-ray](https://github.com/lukewilliamboswell/roc-ray/blob/main/examples/gui-counter.roc). It includes a working implementation for the Counter example used in the Action-State design idea. The demo shows three counters in a window that be independently modified and retain their own state in the `Model`. User actions from clicking the buttons update the state of the `Model` using an `Action`.
+The code for this demo is located at [github.com/lukewilliamboswell/roc-ray](https://github.com/lukewilliamboswell/roc-ray/blob/main/examples/gui-counter.roc). It includes a working implementation for the Counter example used in the Action-State design idea. The demo shows three counters in a window that can be independently modified and retain their own state in the `Model`. User actions from clicking the buttons update the state of the `Model` using an `Action`.
 
 To run this locally I used [roc](https://www.roc-lang.org), [zig](https://ziglang.org) version 0.11.0, and [raylib](https://www.raylib.com).
 
@@ -48,7 +48,7 @@ To run this locally I used [roc](https://www.roc-lang.org), [zig](https://ziglan
 
 ## [Step 1 minimal platform](#step1) {#step1}
 
-To get started, I copied and modified another platform to suit raylib. I combined different parts from [roc-wasm4](https://github.com/lukewilliamboswell/roc-wasm4), [roc-zig-package-experiment](https://github.com/lukewilliamboswell/roc-zig-package-experiment), and [roc-lang/platform-switching](https://github.com/roc-lang/roc/tree/main/examples/platform-switching). I wanted the API from roc-wasm and the implementation of e.g. `roc_alloc` and `roc_panic` from the platform-switching example.
+To get started, I copied and modified another platform to suit raylib. I combined different parts from [roc-wasm4](https://github.com/lukewilliamboswell/roc-wasm4), [roc-zig-package-experiment](https://github.com/lukewilliamboswell/roc-zig-package-experiment), and [roc-lang/platform-switching](https://github.com/roc-lang/roc/tree/main/examples/platform-switching). I wanted the API from roc-wasm and the implementation for the low-level parts from the platform-switching example.
 
 I want application authors to use just `roc run` and have a working application. If I can avoid complicated build dependencies or setup I think this would be a more friendly platform to use. 
 
@@ -56,7 +56,7 @@ To do this the platform needs to generate the pre-built files e.g. `macos-arm64.
 
 Cross-compiling for different architectures using zig is easy, so I hope that including raylib and necessary dependencies in this platform will be easy to build static libraries for the prebuilt-binaries. When a roc application uses a platform from a URL, roc uses the prebuilt-binary. This means application authors don't need to have the zig host toolchain installed.
 
-The platform needs to be built separately from the roc application. The roc cli finds the prebuilt-platform at a relative path e.g. `packages { ray: "../platform/main.roc" }`, so then `roc dev --prebuilt-platform example.roc` will run the application and display a window.
+Using `roc dev --prebuilt-platform example.roc` runs the application. The roc cli finds the prebuilt-platform at a relative path e.g. `packages { ray: "../platform/main.roc" }`. The platform is built separately from the roc application. 
 
 For developing a minimal platform to start with, I chose not to include raylib or call into roc from zig. The main function in `platform/host.zig` printed `"hello,world"` just to test the platform built correctly.
 
@@ -66,7 +66,7 @@ Next, I followed the instructions in [https://github.com/ryupold/raylib.zig](htt
 
 I updated `build.zig` and made minor changes so the libraries would build and link with roc. The main function in `platform/host.zig` was updated with the raylib example. It still didn't call into roc at this stage. 
 
-I wasn't able to get this working on my own, so I reached out to Brendan Hansknecht, who provided assistance with linking and missing symbols.
+I wasn't able to get this working on my own, so I reached out to [Brendan Hansknecht](https://github.com/bhansconnect), who provided assistance with linking and missing symbols.
 
 Below is the zig raylib example which I copied into my `platform/host.zig` alongside the other host functions like `roc_alloc` and `roc_panic`. Running the app with `roc dev` displayed the raylib example in a window with `"hello world!"` printed in yellow text.
 
@@ -100,9 +100,9 @@ The roc app and platform API weren't doing anything useful at this stage. I had 
 
 ## [Step 3 roc <-> host interface](#step3) {#step3}
 
-I didn't need to change `platform/main.roc` and the implementation for `mainForHost` in particular. By leaving the roc-host interface as it was, I re-purposed the implementation for calling into roc in `platform/host.zig`.
+The `mainForHost` function in `platform/main.roc` defines the interface between roc and the zig host. I copied the platform, including both the roc and zig parts, from [roc-wasm4](https://github.com/lukewilliamboswell/roc-wasm4). This meant I was able to re-use these implementations for calling into roc in `platform/host.zig`.
 
-The host will call `roc__mainForHost_1_exposed_generic` which is generated by roc and returns a struct containing two functions `init` and `update`. This is defined in `platform/main.roc` and represents the interface between roc and the host.
+The zig host is responsible for calling `roc__mainForHost_1_exposed_generic` which is generated by roc and returns a struct containing two functions `init` and `update`. This is defined in `platform/main.roc` and represents the interface between roc and the host.
 
 *Note the design for platforms is currently evolving, so how this is done in future may change significantly.*
 
@@ -171,7 +171,7 @@ roc__mainForHost_2_caller(undefined, update_captures, &model);
 
 I only have a surface-level appreciation for how this works, so I am not going to try and explain it any further here. However, I have always found people in the beginner channel on roc zulip to be friendly and helpful whenever I ask any questions. 
 
-Thank you to Brendan Hansknecht for helping me with this. 
+Thank you to [Brendan Hansknecht](https://github.com/bhansconnect) for helping me with this. 
 
 ## [Step 5 adding an effect](#step5) {#step5}
 
@@ -218,7 +218,20 @@ This is how roc will call into the host. Note that the host first calls into roc
 
 ## [Step 6 roc <-> roc interface](#step6) {#step6}
 
-The app provides two functions `init` and `render` to the platform. These both return a `Task Model []` that provides the `Model` to be used in the next update.
+The platform exposes an API for an application to interact with. The application provides an implementation and provides the types and functions required by the platform. This is the interface between the application and the platform and is defined in `platform/main.roc`.
+
+For this platform the header part `requires { Model } { main : Program Model }`, indicates that the `Model` and `main` are to be provided by the application.
+
+We define `Program state` in `platform/Core.roc` to the following, which is similar to the `ProgramForHost` described in [Step 3 roc <-> host interface](#step3), however now the `state` is a type variable instead of a boxed `Model`. 
+
+```roc
+Program state : {
+    init : Task state [],
+    render : state -> Task state [],
+}
+```
+
+Here, the app provides two functions `init` and `render` to the platform. These both return a `Task Model []` which provides the `Model` that will be used in the next update.
 
 In the demo application this is implemented as follows:
 
