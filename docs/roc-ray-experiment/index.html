@@ -1,37 +1,81 @@
 <!DOCTYPE html><html  lang="en" class="no-js"><head><meta  charset="utf-8"><title></title><meta  name="description" content=""><meta  name="viewport" content="width=device-width"><link  rel="stylesheet" href="/site.css"></head><body  id="index-page"><main><p><a href="/">Return to Home</a></p>
 <h1>Building a GUI platform - Action-State using <a href="https://ziglang.org">zig</a> and <a href="https://www.raylib.com">raylib</a></h1>
 <p><time class="post-date" datetime="2024-01-25">25 Jan 2024</time> <em>~15 mins reading time</em></p>
-<p>This is my experience about what I have learnt from developing a GUI platform using zig and raylib. I hope you find it useful, and I encourage you to build a platform as it is a great a way to learn more about <a href="https://roc-lang.org">roc</a>.</p>
-<p>Richard Feldman has a draft <a href="https://docs.google.com/document/d/16qY4NGVOHu8mvInVD-ddTajZYSsFvFBvQON_hmyHGfo/edit?usp=sharing">Design Idea: Action-State</a> which outlines an idea for User-Interfaces (UI). His idea is similar to, but different from how UI are built in Elm with <a href="https://guide.elm-lang.org/architecture/">The Elm Architecture (TEA)</a>. It is tailored for plugins with an <code>Init</code> and <code>Render</code> function, instead of the <code>Model</code>, <code>View</code>, <code>Update</code> found in TEA.</p>
-<p>After working on the <a href="https://github.com/lukewilliamboswell/roc-wasm4">roc-wasm4</a> zig platform with Brendan Hansknecht, I wanted to explore Action-State and am pleased to have something minimal working.</p>
-<p>The code here isn't polished, I've been iterating on API ideas and generally exploring new things. There is a lot more for me to learn about roc, zig, and platform development. However, I want to share what I have, flaws and all, for the benefit of others.</p>
-<p>This platform could become useful for building cross-platform GUIs with roc someday, however there is still a lot of work to do. I don't see any major blocking issues, and look forward to working on this further.</p>
-<p>In this article I discuss various topics relating to platforms and applications. If you would like to learn more about these then check out <a href="https://roc-lang.org/platforms">the offical guide</a>. I have gained most of my knowledge through experiments and assistance from the community, and I highly recommend reaching out on <a href="https://roc.zulipchat.com">roc zulip</a> if you have any questions.</p>
-<p>P.S. If you're reading this and have any interest in writing a layout algorithm for GUI's in pure roc, then please let me know. This would help make this even more awesome!</p>
+<p>This is my experience from developing a GUI in <a href="https://roc-lang.org">roc</a> using <a href="https://ziglang.org">zig</a> for the platform and <a href="https://www.raylib.com">raylib</a> for the graphics library. </p>
+<p>I hope you find it useful, and I encourage anyone interested to build a platform as a great way to learn more about roc.</p>
+<p>The inspiration for this experiment comes from Richard Feldman's draft <a href="https://docs.google.com/document/d/16qY4NGVOHu8mvInVD-ddTajZYSsFvFBvQON_hmyHGfo/edit?usp=sharing">Design Idea: Action-State</a>. </p>
+<p>In Action-State, Richard outlines an idea for User-Interfaces (UI) using roc. His idea is similar to, but different from, how UI are built in Elm with <a href="https://guide.elm-lang.org/architecture/">The Elm Architecture (TEA)</a>. It is tailored for plugins with an <code>Init</code> and <code>Render</code> function, instead of the <code>Model</code>, <code>View</code>, <code>Update</code> found in TEA.</p>
 <p>These are the steps I cover in this article. </p>
 <ul>
-<li><a href="#goals">Goals</a></li>
-<li><a href="#demo">Demo</a></li>
+<li><a href="#goals">My Goals</a></li>
+<li><a href="#demo">Demonstration of the application</a></li>
+<li><a href="#development">Development of the platform</a>
+<ul>
 <li><a href="#step1">Step 1 minimal platform</a></li>
 <li><a href="#step2">Step 2 raylib library</a></li>
 <li><a href="#step3">Step 3 roc &lt;-&gt; host interface</a></li>
-<li><a href="#glue-llvm">Glue &amp; LLVM IR</a></li>
+<li><a href="#glue-llvm">Aside glue &amp; LLVM IR</a></li>
 <li><a href="#step4">Step 4 calling roc</a></li>
 <li><a href="#step5">Step 5 adding an effect</a></li>
 <li><a href="#step6">Step 6 roc &lt;-&gt; roc interface</a></li>
+</ul>
+</li>
 <li><a href="#reflection">Reflection</a></li>
 <li><a href="#source">Source code</a></li>
 </ul>
-<h2 id="goals"><a href="#goals">My Goals</a></h2>
+<h1 id="goals"><a href="#goals">My Goals</a></h1>
 <ol>
 <li>Learn more about Roc, platform dev, and have fun</li>
 <li>Implement a <a href="https://ziglang.org">zig</a> platform that uses <a href="https://www.raylib.com">raylib</a> for graphics</li>
-<li>Implement the Action-State design idea</li>
+<li>Explore the Action-State design idea</li>
 </ol>
-<h2 id="demo"><a href="#demo">Demo</a></h2>
-<p>The code for this demo is located at <a href="https://github.com/lukewilliamboswell/roc-ray/blob/main/examples/gui-counter.roc">github.com/lukewilliamboswell/roc-ray</a>. It includes a working implementation for the Counter example used in the Action-State design idea. The demo shows three counters in a window that can be independently modified and retain their own state in the <code>Model</code>. User actions from clicking the buttons update the state of the <code>Model</code> using an <code>Action</code>.</p>
-<p>To run this locally I used <a href="https://www.roc-lang.org">roc</a>, <a href="https://ziglang.org">zig</a> version 0.11.0, and <a href="https://www.raylib.com">raylib</a>.</p>
+<h1 id="demo"><a href="#demo">Demonstration of the application</a></h1>
+<p>To see the code for this application <a href="#source">see the section</a> at the end of this article or <a href="https://github.com/lukewilliamboswell/roc-ray/blob/main/examples/gui-counter.roc">the repository</a>. </p>
 <img class="demo-img" src="/roc-ray-experiment/demo.gif" alt="screen capture of the counter demo application being used"/>
+<p>This is a minimal implementation of the Counter Example used in the <a href="https://docs.google.com/document/d/16qY4NGVOHu8mvInVD-ddTajZYSsFvFBvQON_hmyHGfo/edit?usp=sharing">Action-State</a> design idea. </p>
+<p>Each of the three counters has their own state implemented as an opaque type <code>Counter</code> that wraps an <code>I64</code> value.</p>
+<pre><samp><span class="upperident">Counter</span><span class="kw"> :=</span><span class="upperident"> I64</span><span class="lowerident">
+
+init</span><span class="kw"> :</span><span class="upperident"> I64</span><span class="kw"> -&gt;</span><span class="upperident"> Counter</span><span class="lowerident">
+init</span><span class="kw"> =</span><span class="upperident"> @</span><span class="upperident">Counter</span><span class="lowerident">
+
+render</span><span class="kw"> :</span><span class="upperident"> Counter</span><span class="delimeter">,</span><span class="upperident"> Color</span><span class="kw"> -&gt;</span><span class="upperident"> Elem</span><span class="upperident"> Counter</span><span class="lowerident">
+render</span><span class="kw"> =</span><span class="kw"> \</span><span class="upperident">@</span><span class="upperident">Counter</span><span class="lowerident"> state</span><span class="delimeter">,</span><span class="lowerident"> color</span><span class="kw"> -&gt;</span><span class="upperident">
+    GUI</span><span class="delimeter">.</span><span class="lowerident">col</span><span class="delimeter"> [</span><span class="upperident">
+        GUI</span><span class="delimeter">.</span><span class="lowerident">button</span><span class="delimeter"> {</span><span class="lowerident">
+            text</span><span class="kw">:</span><span class="literal"> "+"</span><span class="delimeter">,</span><span class="lowerident">
+            onPress</span><span class="kw">:</span><span class="kw"> \</span><span class="upperident">@</span><span class="upperident">Counter</span><span class="lowerident"> prev</span><span class="kw"> -&gt;</span><span class="upperident"> Action</span><span class="delimeter">.</span><span class="lowerident">update</span><span class="delimeter"> (</span><span class="upperident">@</span><span class="upperident">Counter</span><span class="delimeter"> (</span><span class="lowerident">prev</span><span class="op"> +</span><span class="literal"> 1</span><span class="delimeter">)</span><span class="delimeter">)</span><span class="delimeter">,</span><span class="delimeter">
+        }</span><span class="delimeter">,</span><span class="upperident">
+        GUI</span><span class="delimeter">.</span><span class="lowerident">text</span><span class="delimeter"> {</span><span class="lowerident">
+            label</span><span class="kw">:</span><span class="literal"> "Clicked $(Num.toStr state) times"</span><span class="delimeter">,</span><span class="lowerident">
+            color</span><span class="delimeter">,</span><span class="delimeter">
+        }</span><span class="delimeter">,</span><span class="upperident">
+        GUI</span><span class="delimeter">.</span><span class="lowerident">button</span><span class="delimeter"> {</span><span class="lowerident">
+            text</span><span class="kw">:</span><span class="literal"> "-"</span><span class="delimeter">,</span><span class="lowerident">
+            onPress</span><span class="kw">:</span><span class="kw"> \</span><span class="upperident">@</span><span class="upperident">Counter</span><span class="lowerident"> prev</span><span class="kw"> -&gt;</span><span class="upperident"> Action</span><span class="delimeter">.</span><span class="lowerident">update</span><span class="delimeter"> (</span><span class="upperident">@</span><span class="upperident">Counter</span><span class="delimeter"> (</span><span class="lowerident">prev</span><span class="op"> -</span><span class="literal"> 1</span><span class="delimeter">)</span><span class="delimeter">)</span><span class="delimeter">,</span><span class="delimeter">
+        }</span><span class="delimeter">,</span><span class="delimeter">
+    ]</span></samp></pre>
+<p>The three counters shown in the window are being modified independently. Their state is retained in the application <code>Model</code> as follows.</p>
+<pre><samp><span class="upperident">Model</span><span class="kw"> :</span><span class="delimeter"> {</span><span class="lowerident">
+    left</span><span class="kw"> :</span><span class="upperident"> Counter</span><span class="delimeter">,</span><span class="lowerident">
+    middle</span><span class="kw"> :</span><span class="upperident"> Counter</span><span class="delimeter">,</span><span class="lowerident">
+    right</span><span class="kw"> :</span><span class="upperident"> Counter</span><span class="delimeter">,</span><span class="delimeter">
+}</span></samp></pre>
+<p>When a user clicks one of the buttons, the state of the <code>Counter</code> in the <code>Model</code> is updated using an <code>Action</code>. Here is how this is implemented for the increment button: </p>
+<pre><samp><span class="upperident">GUI</span><span class="delimeter">.</span><span class="lowerident">button</span><span class="delimeter"> {</span><span class="lowerident">
+    text</span><span class="kw">:</span><span class="literal"> "+"</span><span class="delimeter">,</span><span class="lowerident">
+    onPress</span><span class="kw">:</span><span class="kw"> \</span><span class="upperident">@</span><span class="upperident">Counter</span><span class="lowerident"> prev</span><span class="kw"> -&gt;</span><span class="upperident"> Action</span><span class="delimeter">.</span><span class="lowerident">update</span><span class="delimeter"> (</span><span class="upperident">@</span><span class="upperident">Counter</span><span class="delimeter"> (</span><span class="lowerident">prev</span><span class="op"> +</span><span class="literal"> 1</span><span class="delimeter">)</span><span class="delimeter">)</span><span class="delimeter">,</span><span class="delimeter">
+}</span><span class="delimeter">,</span></samp></pre>
+<p>A user click is detected by the platform, which then is responsible for calling the provided <code>onPress</code> function. <code>onPress</code> receives the previous state, and returns an action with the new state of the <code>Counter</code>.</p>
+<p>For describing the UI for a GUI application, and handling actions such as a button press, I think this approach is nice.</p>
+<p>For the rest of this article, I'll dive into the behind-the-scenes details for the GUI platform, and discuss the steps I took to develop it. An application author using this GUI platform doesn't need to deal with any of these lower-level details, however, this is the part of my journey I found to be the most interesting.</p>
+<h1 id="development"><a href="#development">Development of the platform</a></h1>
+<p>The platform code isn't polished, I've been iterating on API ideas and generally exploring new things. There is a lot more for me to learn about roc, zig, and platform development. However, I want to share what I have, flaws and all, for the benefit of others.</p>
+<p>This platform could become useful for building cross-platform GUIs with roc someday, however there is still a lot of work to do. I don't see any major blocking issues, and look forward to working on this further.</p>
+<p>In the sections below, I discuss various topics relating to platforms and applications. If you would like to learn more about these then check out <a href="https://roc-lang.org/platforms">the offical guide</a>. </p>
+<p>I have gained most of my knowledge through experiments and assistance from the community, and I highly recommend reaching out on <a href="https://roc.zulipchat.com">roc zulip</a> if you have any questions.</p>
+<p>Also, when developing this platform I used <a href="https://www.roc-lang.org">roc</a>, <a href="https://ziglang.org">zig</a> version 0.11.0, and <a href="https://www.raylib.com">raylib</a> which may be useful if you woudl like to clone the repository and try it out for yourself.</p>
+<p>P.S. If you're reading this and have any interest in writing a layout algorithm for GUI's in pure roc, then please let me know. This would help make this even more awesome!</p>
 <h2 id="step1"><a href="#step1">Step 1 minimal platform</a></h2>
 <p>To get started, I copied and modified another platform to suit raylib. I combined different parts from <a href="https://github.com/lukewilliamboswell/roc-wasm4">roc-wasm4</a>, <a href="https://github.com/lukewilliamboswell/roc-zig-package-experiment">roc-zig-package-experiment</a>, and <a href="https://github.com/roc-lang/roc/tree/main/examples/platform-switching">roc-lang/platform-switching</a>. I wanted the API from roc-wasm and the implementation for the low-level parts from the platform-switching example.</p>
 <p>I want application authors to use just <code>roc run</code> and have a working application. If I can avoid complicated build dependencies or setup I think this would be a more friendly platform to use. </p>
@@ -82,7 +126,7 @@ mainForHost</span><span class="kw"> :</span><span class="upperident"> ProgramFor
 mainForHost</span><span class="kw"> =</span><span class="delimeter"> {</span><span class="lowerident"> init</span><span class="delimeter">,</span><span class="lowerident"> update</span><span class="delimeter"> }</span></samp></pre>
 <p>Both of the functions in <code>ProgramForHost</code> provide a boxed representation of the app's <code>Model</code> to the host. Boxing the model stores the <code>Model</code> on the heap which enables roc to provide the host with an opaque pointer to the the <code>Model</code>. </p>
 <p>The platform is unable to know the size or shape of <code>Model</code>, as this is defined in the application and provided to the platform. The host receives a pointer to a <code>Model</code> by calling <code>init</code>, which it can then pass back to roc in a future call to <code>update</code>. This is how a roc application is able to retain the state between calls.</p>
-<h2 id="glue-llvm"><a href="#glue-llvm">Glue &amp; LLVM IR</a></h2>
+<h2 id="glue-llvm"><a href="#glue-llvm">Aside glue &amp; LLVM IR</a></h2>
 <p>In the future platform authors will use <code>roc glue</code> to generate all of the relevant types and glue code for their platform, including the roc builtins (or standard library). However, this feature is still in development and there isn't a glue-spec written for zig yet.</p>
 <p>So, in the interim, I found it useful to generate the LLVM IR representation for a platform by running <code>roc build --emit-llvm-ir --no-link examples/gui-counter.roc</code>. This produces a <code>gui-counter.ll</code> file which contains the IR for the application and platform without the host.</p>
 <p>For example, the generated LLVM IR for <code>roc__mainForHost_1_exposed_generic</code> is:</p>
@@ -201,7 +245,7 @@ update</span><span class="kw"> =</span><span class="kw"> \</span><span class="lo
     |&gt;</span><span class="lowerident"> main</span><span class="delimeter">.</span><span class="lowerident">render</span><span class="kw">
     |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="upperident"> Box</span><span class="delimeter">.</span><span class="lowerident">box</span></samp></pre>
 <p>Note the model is unboxed and then boxed when calling the <code>render</code> provided by the application.</p>
-<h2 id="reflection"><a href="#reflection">Reflection</a></h2>
+<h1 id="reflection"><a href="#reflection">Reflection</a></h1>
 <p>I have enjoyed building this platform and am pleasantly surprised that this works as well as it does. I've learnt a lot about roc and platform development.</p>
 <p>The raylib functionality is limited to just a handful of calls, so there is still a lot of work to produce something that utilises the available capability within the library. </p>
 <p>The Action-State implementation is very minimal with significant aspects that still need to be explored.</p>
@@ -213,7 +257,7 @@ update</span><span class="kw"> =</span><span class="kw"> \</span><span class="lo
 <li>modify the API and implement something like <code>fromTask : Task ok err, (Result ok err -> (Result state [Removed]* -> Action state)) -> Action state</code> to run tasks asynchronously in event handlers instead of the update Fn</li>
 </ul>
 <p>Thank you for reading. Please let me know if you have enjoyed this or would like to assist with further exploration using this platform.</p>
-<h2 id="source"><a href="#source">Source code</a></h2>
+<h1 id="source"><a href="#source">Source code</a></h1>
 <p><em>full source code at <a href="https://github.com/lukewilliamboswell/roc-ray">https://github.com/lukewilliamboswell/roc-ray</a></em> </p>
 <p>Below is a copy of the demo application at the time of writing.</p>
 <pre><samp><span class="comment"># gui-counter.roc</span><span class="kw">

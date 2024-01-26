@@ -4,47 +4,107 @@
 
 <time class="post-date" datetime="2024-01-25">25 Jan 2024</time> *~15 mins reading time*
 
-This is my experience about what I have learnt from developing a GUI platform using zig and raylib. I hope you find it useful, and I encourage you to build a platform as it is a great a way to learn more about [roc](https://roc-lang.org).
+This is my experience from developing a GUI in [roc](https://roc-lang.org) using [zig](https://ziglang.org) for the platform and [raylib](https://www.raylib.com) for the graphics library. 
 
-Richard Feldman has a draft [Design Idea: Action-State](https://docs.google.com/document/d/16qY4NGVOHu8mvInVD-ddTajZYSsFvFBvQON_hmyHGfo/edit?usp=sharing) which outlines an idea for User-Interfaces (UI). His idea is similar to, but different from how UI are built in Elm with [The Elm Architecture (TEA)](https://guide.elm-lang.org/architecture/). It is tailored for plugins with an `Init` and `Render` function, instead of the `Model`, `View`, `Update` found in TEA.
+I hope you find it useful, and I encourage anyone interested to build a platform as a great way to learn more about roc.
 
-After working on the [roc-wasm4](https://github.com/lukewilliamboswell/roc-wasm4) zig platform with Brendan Hansknecht, I wanted to explore Action-State and am pleased to have something minimal working.
+The inspiration for this experiment comes from Richard Feldman's draft [Design Idea: Action-State](https://docs.google.com/document/d/16qY4NGVOHu8mvInVD-ddTajZYSsFvFBvQON_hmyHGfo/edit?usp=sharing). 
 
-The code here isn't polished, I've been iterating on API ideas and generally exploring new things. There is a lot more for me to learn about roc, zig, and platform development. However, I want to share what I have, flaws and all, for the benefit of others.
-
-This platform could become useful for building cross-platform GUIs with roc someday, however there is still a lot of work to do. I don't see any major blocking issues, and look forward to working on this further.
-
-In this article I discuss various topics relating to platforms and applications. If you would like to learn more about these then check out [the offical guide](https://roc-lang.org/platforms). I have gained most of my knowledge through experiments and assistance from the community, and I highly recommend reaching out on [roc zulip](https://roc.zulipchat.com) if you have any questions.
-
-P.S. If you're reading this and have any interest in writing a layout algorithm for GUI's in pure roc, then please let me know. This would help make this even more awesome!
+In Action-State, Richard outlines an idea for User-Interfaces (UI) using roc. His idea is similar to, but different from, how UI are built in Elm with [The Elm Architecture (TEA)](https://guide.elm-lang.org/architecture/). It is tailored for plugins with an `Init` and `Render` function, instead of the `Model`, `View`, `Update` found in TEA.
 
 These are the steps I cover in this article. 
 
-- [Goals](#goals)
-- [Demo](#demo)
-- [Step 1 minimal platform](#step1)
-- [Step 2 raylib library](#step2)
-- [Step 3 roc <-> host interface](#step3)
-- [Glue & LLVM IR](#glue-llvm)
-- [Step 4 calling roc](#step4)
-- [Step 5 adding an effect](#step5)
-- [Step 6 roc <-> roc interface](#step6)
+- [My Goals](#goals)
+- [Demonstration of the application](#demo)
+- [Development of the platform](#development)
+  - [Step 1 minimal platform](#step1)
+  - [Step 2 raylib library](#step2)
+  - [Step 3 roc <-> host interface](#step3)
+  - [Aside glue & LLVM IR](#glue-llvm)
+  - [Step 4 calling roc](#step4)
+  - [Step 5 adding an effect](#step5)
+  - [Step 6 roc <-> roc interface](#step6)
 - [Reflection](#reflection)
 - [Source code](#source)
 
-## [My Goals](#goals) {#goals}
+# [My Goals](#goals) {#goals}
 
 1. Learn more about Roc, platform dev, and have fun
 2. Implement a [zig](https://ziglang.org) platform that uses [raylib](https://www.raylib.com) for graphics
-3. Implement the Action-State design idea
+3. Explore the Action-State design idea
 
-## [Demo](#demo) {#demo}
+# [Demonstration of the application](#demo) {#demo}
 
-The code for this demo is located at [github.com/lukewilliamboswell/roc-ray](https://github.com/lukewilliamboswell/roc-ray/blob/main/examples/gui-counter.roc). It includes a working implementation for the Counter example used in the Action-State design idea. The demo shows three counters in a window that can be independently modified and retain their own state in the `Model`. User actions from clicking the buttons update the state of the `Model` using an `Action`.
-
-To run this locally I used [roc](https://www.roc-lang.org), [zig](https://ziglang.org) version 0.11.0, and [raylib](https://www.raylib.com).
+To see the code for this application [see the section](#source) at the end of this article or [the repository](https://github.com/lukewilliamboswell/roc-ray/blob/main/examples/gui-counter.roc). 
 
 <img class="demo-img" src="/roc-ray-experiment/demo.gif" alt="screen capture of the counter demo application being used"/>
+
+This is a minimal implementation of the Counter Example used in the [Action-State](https://docs.google.com/document/d/16qY4NGVOHu8mvInVD-ddTajZYSsFvFBvQON_hmyHGfo/edit?usp=sharing) design idea. 
+
+Each of the three counters has their own state implemented as an opaque type `Counter` that wraps an `I64` value.
+
+```roc
+Counter := I64
+
+init : I64 -> Counter
+init = @Counter
+
+render : Counter, Color -> Elem Counter
+render = \@Counter state, color ->
+    GUI.col [
+        GUI.button {
+            text: "+",
+            onPress: \@Counter prev -> Action.update (@Counter (prev + 1)),
+        },
+        GUI.text {
+            label: "Clicked $(Num.toStr state) times",
+            color,
+        },
+        GUI.button {
+            text: "-",
+            onPress: \@Counter prev -> Action.update (@Counter (prev - 1)),
+        },
+    ]
+```
+
+The three counters shown in the window are being modified independently. Their state is retained in the application `Model` as follows.
+
+```roc
+Model : {
+    left : Counter,
+    middle : Counter,
+    right : Counter,
+}
+```
+
+When a user clicks one of the buttons, the state of the `Counter` in the `Model` is updated using an `Action`. Here is how this is implemented for the increment button: 
+
+```roc
+GUI.button {
+    text: "+",
+    onPress: \@Counter prev -> Action.update (@Counter (prev + 1)),
+},
+```
+
+A user click is detected by the platform, which then is responsible for calling the provided `onPress` function. `onPress` receives the previous state, and returns an action with the new state of the `Counter`.
+
+For describing the UI for a GUI application, and handling actions such as a button press, I think this approach is nice.
+
+For the rest of this article, I'll dive into the behind-the-scenes details for the GUI platform, and discuss the steps I took to develop it. An application author using this GUI platform doesn't need to deal with any of these lower-level details, however, this is the part of my journey I found to be the most interesting.
+
+# [Development of the platform](#development) {#development}
+
+The platform code isn't polished, I've been iterating on API ideas and generally exploring new things. There is a lot more for me to learn about roc, zig, and platform development. However, I want to share what I have, flaws and all, for the benefit of others.
+
+This platform could become useful for building cross-platform GUIs with roc someday, however there is still a lot of work to do. I don't see any major blocking issues, and look forward to working on this further.
+
+In the sections below, I discuss various topics relating to platforms and applications. If you would like to learn more about these then check out [the offical guide](https://roc-lang.org/platforms). 
+
+I have gained most of my knowledge through experiments and assistance from the community, and I highly recommend reaching out on [roc zulip](https://roc.zulipchat.com) if you have any questions.
+
+Also, when developing this platform I used [roc](https://www.roc-lang.org), [zig](https://ziglang.org) version 0.11.0, and [raylib](https://www.raylib.com) which may be useful if you woudl like to clone the repository and try it out for yourself.
+
+P.S. If you're reading this and have any interest in writing a layout algorithm for GUI's in pure roc, then please let me know. This would help make this even more awesome!
 
 ## [Step 1 minimal platform](#step1) {#step1}
 
@@ -120,7 +180,7 @@ Both of the functions in `ProgramForHost` provide a boxed representation of the 
 
 The platform is unable to know the size or shape of `Model`, as this is defined in the application and provided to the platform. The host receives a pointer to a `Model` by calling `init`, which it can then pass back to roc in a future call to `update`. This is how a roc application is able to retain the state between calls.  
 
-## [Glue & LLVM IR](#glue-llvm) {#glue-llvm}
+## [Aside glue & LLVM IR](#glue-llvm) {#glue-llvm}
 
 In the future platform authors will use `roc glue` to generate all of the relevant types and glue code for their platform, including the roc builtins (or standard library). However, this feature is still in development and there isn't a glue-spec written for zig yet.
 
@@ -288,7 +348,7 @@ update = \boxedModel ->
 
 Note the model is unboxed and then boxed when calling the `render` provided by the application.
 
-## [Reflection](#reflection) {#reflection}
+# [Reflection](#reflection) {#reflection}
 
 I have enjoyed building this platform and am pleasantly surprised that this works as well as it does. I've learnt a lot about roc and platform development.
 
@@ -304,7 +364,7 @@ Further work could include;
 
 Thank you for reading. Please let me know if you have enjoyed this or would like to assist with further exploration using this platform.
 
-## [Source code](#source) {#source}
+# [Source code](#source) {#source}
 
 *full source code at [https://github.com/lukewilliamboswell/roc-ray](https://github.com/lukewilliamboswell/roc-ray)* 
 
