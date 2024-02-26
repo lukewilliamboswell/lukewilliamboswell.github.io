@@ -31,7 +31,7 @@ But first, here is a demonstration of the work in progress.
 
 # [Demonstration](#demo) {#demo}
 
-Code available at [this commit](https://github.com/lukewilliamboswell/roc-htmx-playground/tree/c7b57e97bea3b964bc17b6131cb0e528136df74d). 
+Code available at [this commit](https://github.com/lukewilliamboswell/roc-htmx-playground/tree/c23869de93dff8a22006639d4aef243c38130eb4). 
 
 This shows the same `Todos` displayed in both a list and a tree view. They are being updated using htmx events which trigger a re-render of the views.
 
@@ -39,7 +39,7 @@ This shows the same `Todos` displayed in both a list and a tree view. They are b
 
 # [Events](#nested-sets) {#nested-sets}
 
-You can read about htmx events [here](https://htmx.org/docs/#triggers), specifically the methods to trigger AJAX requests. The `hx-trigger` attribute is used to listen for a specific event, such as a user clicking on a checkbox. 
+You can read about htmx events [here](https://htmx.org/docs/#triggers), specifically the various ways you can trigger AJAX requests. The `hx-trigger` attribute is used to listen for a specific event, such as a user clicking on a checkbox. 
 
 For this demo I am using the following feature, it's also explained in the htmx example [update-other-content](https://htmx.org/examples/update-other-content/#events);
  
@@ -111,14 +111,14 @@ tree = \{ path, userId } ->
 
     SQLite3.execute { path, query, bindings }
     |> Task.mapErr SqlError
-    |> Task.map \rows -> parseTreeRows rows []
+    |> Task.await \rows -> parseTreeRows rows [] |> Task.fromResult
 
-parseTreeRows : List (List SQLite3.Value), List (NestedSet Todo) -> Tree Todo
+parseTreeRows : List (List SQLite3.Value), List (NestedSet Todo) -> Result (Tree Todo) _
 parseTreeRows = \rows, acc ->
     when rows is
 
         # base case, translate the `acc` from `NestedSet`s to a `Tree`
-        [] -> Model.nestedSetToTree acc
+        [] -> Model.nestedSetToTree acc |> Ok
 
         # recursive case, parse the rows and build up the `acc` list of `NestedSet`s
         [[Integer id, String task, String status, Integer left, Integer right], .. as rest] ->
@@ -127,7 +127,7 @@ parseTreeRows = \rows, acc ->
 
             parseTreeRows rest (List.append acc { value: todo, left, right })
 
-        _ -> crash "unexpected values returned for getting Todos as a tree, got $(Inspect.toStr rows)"
+        _ -> Inspect.toStr rows |> UnexpectedSQLValues |> Err
 ```
 
 ## [Step 3 Render TreeView Page](#step3) {#step3}
@@ -301,12 +301,19 @@ view = \{ session, nodes } ->
 
 The html that is returned from the server is displayed to the user in the browser, which is similar to [Step 3](#step3).
 
-However, unlike previously, htmx swaps out the content of the `body` element with the new html instead of reloading the page and other assets like css and js.
+However, unlike in that step htmx will swap out the content of the `body` element with the new html. This doesn't require the page and other assets like css and js to be reloaded.
 
-This can be seen in the [Step 6](#step6) code example. 
-
-When the event is triggered, the attribute `(attribute "hx-get") "/treeview"` directs that an AJAX request be sent to `/treeview` and then `(attribute "hx-target") "body"` instructs the response html to be swapped into the `body`.
+When the event is triggered, the attribute `(attribute "hx-get") "/treeview"` directs that an AJAX request be sent to `/treeview` and then `(attribute "hx-target") "body"` instructs the response html to be swapped into the `body`. This can be seen in the [Step 6](#step6) code example. 
 
 # [Reflection](#reflection) {#reflection}
 
-TODO
+Working with events like this in htmx feels good. It's a nice way to structure the client and server code and I think it's a good fit for building a web application with `roc`.
+
+I would like to add more features to the `TreeView` page, such as the ability to add and delete `Todo`'s, or to re-order them in the tree. I think this will be a good way to explore more of the tradeoffs around nested sets, and also to further explore events.
+
+I have found SQLite to be nice to work with. In particular, I like how easy it is to parse the results into various structures. I would like to test SQLite transactions. I suspect the current implementation may not support it at this time, so I may need to revisit that design.
+
+I hope you enjoyed reading this article. If you have any feedback or ideas, please let me know.
+
+
+

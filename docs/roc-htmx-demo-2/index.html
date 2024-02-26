@@ -26,11 +26,11 @@
 </ul>
 <p>But first, here is a demonstration of the work in progress.</p>
 <h1 id="demo"><a href="#demo">Demonstration</a></h1>
-<p>Code available at <a href="https://github.com/lukewilliamboswell/roc-htmx-playground/tree/c7b57e97bea3b964bc17b6131cb0e528136df74d">this commit</a>. </p>
+<p>Code available at <a href="https://github.com/lukewilliamboswell/roc-htmx-playground/tree/c23869de93dff8a22006639d4aef243c38130eb4">this commit</a>. </p>
 <p>This shows the same <code>Todos</code> displayed in both a list and a tree view. They are being updated using htmx events which trigger a re-render of the views.</p>
 <img class="demo-img" src="/roc-htmx-demo-2/demo.gif" alt="screen capture of the application being used"/>
 <h1 id="nested-sets"><a href="#nested-sets">Events</a></h1>
-<p>You can read about htmx events <a href="https://htmx.org/docs/#triggers">here</a>, specifically the methods to trigger AJAX requests. The <code>hx-trigger</code> attribute is used to listen for a specific event, such as a user clicking on a checkbox. </p>
+<p>You can read about htmx events <a href="https://htmx.org/docs/#triggers">here</a>, specifically the various ways you can trigger AJAX requests. The <code>hx-trigger</code> attribute is used to listen for a specific event, such as a user clicking on a checkbox. </p>
 <p>For this demo I am using the following feature, it's also explained in the htmx example <a href="https://htmx.org/examples/update-other-content/#events">update-other-content</a>;</p>
 <blockquote>
 <p><code>from: &lt;CSS Selector&gt;</code> listen for the event on a different element.</p>
@@ -87,14 +87,14 @@ tree</span><span class="kw"> =</span><span class="kw"> \</span><span class="deli
 
     SQLite3</span><span class="delimeter">.</span><span class="lowerident">execute</span><span class="delimeter"> {</span><span class="lowerident"> path</span><span class="delimeter">,</span><span class="lowerident"> query</span><span class="delimeter">,</span><span class="lowerident"> bindings</span><span class="delimeter"> }</span><span class="kw">
     |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">mapErr</span><span class="upperident"> SqlError</span><span class="kw">
-    |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="kw"> \</span><span class="lowerident">rows</span><span class="kw"> -&gt;</span><span class="lowerident"> parseTreeRows</span><span class="lowerident"> rows</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="lowerident">
+    |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">await</span><span class="kw"> \</span><span class="lowerident">rows</span><span class="kw"> -&gt;</span><span class="lowerident"> parseTreeRows</span><span class="lowerident"> rows</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="kw"> |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">fromResult</span><span class="lowerident">
 
-parseTreeRows</span><span class="kw"> :</span><span class="upperident"> List</span><span class="delimeter"> (</span><span class="upperident">List</span><span class="upperident"> SQLite3</span><span class="delimeter">.</span><span class="upperident">Value</span><span class="delimeter">)</span><span class="delimeter">,</span><span class="upperident"> List</span><span class="delimeter"> (</span><span class="upperident">NestedSet</span><span class="upperident"> Todo</span><span class="delimeter">)</span><span class="kw"> -&gt;</span><span class="upperident"> Tree</span><span class="upperident"> Todo</span><span class="lowerident">
+parseTreeRows</span><span class="kw"> :</span><span class="upperident"> List</span><span class="delimeter"> (</span><span class="upperident">List</span><span class="upperident"> SQLite3</span><span class="delimeter">.</span><span class="upperident">Value</span><span class="delimeter">)</span><span class="delimeter">,</span><span class="upperident"> List</span><span class="delimeter"> (</span><span class="upperident">NestedSet</span><span class="upperident"> Todo</span><span class="delimeter">)</span><span class="kw"> -&gt;</span><span class="upperident"> Result</span><span class="delimeter"> (</span><span class="upperident">Tree</span><span class="upperident"> Todo</span><span class="delimeter">)</span><span class="lowerident"> _</span><span class="lowerident">
 parseTreeRows</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">rows</span><span class="delimeter">,</span><span class="lowerident"> acc</span><span class="kw"> -&gt;</span><span class="kw">
     when</span><span class="lowerident"> rows</span><span class="kw"> is</span><span class="comment">
 
         # base case, translate the `acc` from `NestedSet`s to a `Tree`</span><span class="delimeter">
-        [</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="upperident"> Model</span><span class="delimeter">.</span><span class="lowerident">nestedSetToTree</span><span class="lowerident"> acc</span><span class="comment">
+        [</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="upperident"> Model</span><span class="delimeter">.</span><span class="lowerident">nestedSetToTree</span><span class="lowerident"> acc</span><span class="kw"> |&gt;</span><span class="upperident"> Ok</span><span class="comment">
 
         # recursive case, parse the rows and build up the `acc` list of `NestedSet`s</span><span class="delimeter">
         [</span><span class="delimeter">[</span><span class="upperident">Integer</span><span class="lowerident"> id</span><span class="delimeter">,</span><span class="upperident"> String</span><span class="lowerident"> task</span><span class="delimeter">,</span><span class="upperident"> String</span><span class="lowerident"> status</span><span class="delimeter">,</span><span class="upperident"> Integer</span><span class="lowerident"> left</span><span class="delimeter">,</span><span class="upperident"> Integer</span><span class="lowerident"> right</span><span class="delimeter">]</span><span class="delimeter">,</span><span class="delimeter"> .</span><span class="delimeter">.</span><span class="kw"> as</span><span class="lowerident"> rest</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="lowerident">
@@ -103,7 +103,7 @@ parseTreeRows</span><span class="kw"> =</span><span class="kw"> \</span><span cl
 
             parseTreeRows</span><span class="lowerident"> rest</span><span class="delimeter"> (</span><span class="upperident">List</span><span class="delimeter">.</span><span class="lowerident">append</span><span class="lowerident"> acc</span><span class="delimeter"> {</span><span class="lowerident"> value</span><span class="kw">:</span><span class="lowerident"> todo</span><span class="delimeter">,</span><span class="lowerident"> left</span><span class="delimeter">,</span><span class="lowerident"> right</span><span class="delimeter"> }</span><span class="delimeter">)</span><span class="lowerident">
 
-        _</span><span class="kw"> -&gt;</span><span class="kw"> crash</span><span class="literal"> "unexpected values returned for getting Todos as a tree, got $(Inspect.toStr rows)"</span></samp></pre>
+        _</span><span class="kw"> -&gt;</span><span class="upperident"> Inspect</span><span class="delimeter">.</span><span class="lowerident">toStr</span><span class="lowerident"> rows</span><span class="kw"> |&gt;</span><span class="upperident"> UnexpectedSQLValues</span><span class="kw"> |&gt;</span><span class="upperident"> Err</span></samp></pre>
 <h2 id="step3"><a href="#step3">Step 3 Render TreeView Page</a></h2>
 <p>In the code below we can see how the <code>hx-put</code> attribute on the checkbox triggers a <code>PUT</code> request when the checkbox is clicked.</p>
 <pre><samp><span class="comment"># src/Pages/TreeView.roc</span><span class="comment">
@@ -252,9 +252,11 @@ view</span><span class="kw"> =</span><span class="kw"> \</span><span class="deli
         ]</span></samp></pre>
 <h2 id="step8"><a href="#step8">Step 8 Re-render TreeView</a></h2>
 <p>The html that is returned from the server is displayed to the user in the browser, which is similar to <a href="#step3">Step 3</a>.</p>
-<p>However, unlike previously, htmx swaps out the content of the <code>body</code> element with the new html instead of reloading the page and other assets like css and js.</p>
-<p>This can be seen in the <a href="#step6">Step 6</a> code example. </p>
-<p>When the event is triggered, the attribute <code>(attribute "hx-get") "/treeview"</code> directs that an AJAX request be sent to <code>/treeview</code> and then <code>(attribute "hx-target") "body"</code> instructs the response html to be swapped into the <code>body</code>.</p>
+<p>However, unlike in that step htmx will swap out the content of the <code>body</code> element with the new html. This doesn't require the page and other assets like css and js to be reloaded.</p>
+<p>When the event is triggered, the attribute <code>(attribute "hx-get") "/treeview"</code> directs that an AJAX request be sent to <code>/treeview</code> and then <code>(attribute "hx-target") "body"</code> instructs the response html to be swapped into the <code>body</code>. This can be seen in the <a href="#step6">Step 6</a> code example. </p>
 <h1 id="reflection"><a href="#reflection">Reflection</a></h1>
-<p>TODO</p>
+<p>Working with events like this in htmx feels good. It's a nice way to structure the client and server code and I think it's a good fit for building a web application with <code>roc</code>.</p>
+<p>I would like to add more features to the <code>TreeView</code> page, such as the ability to add and delete <code>Todo</code>'s, or to re-order them in the tree. I think this will be a good way to explore more of the tradeoffs around nested sets, and also to further explore events.</p>
+<p>I have found SQLite to be nice to work with. In particular, I like how easy it is to parse the results into various structures. I would like to test SQLite transactions. I suspect the current implementation may not support it at this time, so I may need to revisit that design.</p>
+<p>I hope you enjoyed reading this article. If you have any feedback or ideas, please let me know.</p>
 </main><footer></footer></body></html>
