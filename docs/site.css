@@ -278,3 +278,31 @@ ul.links li a:hover {
 .entity.name.label.c {
     color: var(--green) /* Style for labels like 'entry' */
 }
+
+
+/* Styling for tags */
+.meta.tag.xml {
+    color: var(--magenta);
+}
+
+/* Styling for punctuation */
+.punctuation.definition.tag.begin.xml, .punctuation.definition.tag.end.xml,
+.punctuation.separator.key-value.xml, .punctuation.definition.string.begin.xml,
+.punctuation.definition.string.end.xml {
+    color: var(--gray);
+}
+
+/* Styling for tag names and attributes */
+.entity.name.tag.localname.xml, .entity.other.attribute-name.localname.xml {
+    color: var(--blue);
+}
+
+/* Styling for attribute values (strings) */
+.string.quoted.double.xml {
+    color: var(--orange); 
+}
+
+/* Styling for comments */
+.comment.block.xml {
+    color: var(--green);
+}

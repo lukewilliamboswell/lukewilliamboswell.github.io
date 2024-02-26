@@ -1,0 +1,260 @@
+<!DOCTYPE html><html  lang="en" class="no-js"><head><meta  charset="utf-8"><title></title><meta  name="description" content=""><meta  name="viewport" content="width=device-width"><link  rel="stylesheet" href="/site.css"></head><body  id="index-page"><main><p><a href="/">Return to Home</a></p>
+<h1>Fullstack Roc + htmx - Events</h1>
+<p><time class="post-date" datetime="2024-02-27">27 Jan 2024</time> <em>~15 mins reading time</em></p>
+<p>I want to share what I have learnt about <a href="https://htmx.org/examples/update-other-content/#events">htmx events</a> by experimenting with <a href="https://github.com/lukewilliamboswell/roc-htmx-playground/">lukewilliamboswell/roc-htmx-playground</a>.</p>
+<p>This is an extension from my previous article, <a href="/roc-htmx-demo">Fullstack Roc + htmx—an early exploration</a>. Since that post, I've made the following changes;</p>
+<ul>
+<li>Moved the app into a repository so that others can also experiment with it.</li>
+<li>Implemented an API for <code>SQLite</code> in the <a href="https://github.com/roc-lang/basic-webserver">roc-lang/basic-webserver</a> platform.</li>
+<li>Refactored from a single file to use a more modular structure with Interface modules.</li>
+<li>Implemented a <a href="https://en.wikipedia.org/wiki/Nested_set_model">Nested Set</a> type to represent a hierarchy of <code>Todo</code>'s in SQL.</li>
+<li>Added a <code>TreeView</code> page to display <code>Todo</code>'s in a tree view, instead of just the previous table.</li>
+</ul>
+<p>These are the steps I cover in this article. </p>
+<ul>
+<li><a href="#demo">Demonstration</a></li>
+<li><a href="#nested-sets">Events</a></li>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#step1">Step 1 Navigate to TreeView Page</a></li>
+<li><a href="#step2">Step 2 &amp; 7 Retrieve Todos from SQLite</a></li>
+<li><a href="#step3">Step 3 Render TreeView Page</a></li>
+<li><a href="#step4">Step 4 Click Todo Checkbox</a></li>
+<li><a href="#step5">Step 5 Update SQL then HX-Trigger response</a></li>
+<li><a href="#step6">Step 6 Handle Event</a></li>
+<li><a href="#step8">Step 8 Re-render TreeView</a></li>
+<li><a href="#reflection">Reflection</a></li>
+</ul>
+<p>But first, here is a demonstration of the work in progress.</p>
+<h1 id="demo"><a href="#demo">Demonstration</a></h1>
+<p>Code available at <a href="https://github.com/lukewilliamboswell/roc-htmx-playground/tree/c7b57e97bea3b964bc17b6131cb0e528136df74d">this commit</a>. </p>
+<p>This shows the same <code>Todos</code> displayed in both a list and a tree view. They are being updated using htmx events which trigger a re-render of the views.</p>
+<img class="demo-img" src="/roc-htmx-demo-2/demo.gif" alt="screen capture of the application being used"/>
+<h1 id="nested-sets"><a href="#nested-sets">Events</a></h1>
+<p>You can read about htmx events <a href="https://htmx.org/docs/#triggers">here</a>, specifically the methods to trigger AJAX requests. The <code>hx-trigger</code> attribute is used to listen for a specific event, such as a user clicking on a checkbox. </p>
+<p>For this demo I am using the following feature, it's also explained in the htmx example <a href="https://htmx.org/examples/update-other-content/#events">update-other-content</a>;</p>
+<blockquote>
+<p><code>from: &lt;CSS Selector&gt;</code> listen for the event on a different element.</p>
+</blockquote>
+<p>I think I could have implemented the functionality demonstrated here without using a client-side event, by using multiple endpoints. However, I wanted to try out the event oriented design instead.</p>
+<h2 id="overview"><a href="#overview">Overview</a></h2>
+<p>The following diagram illustrates a sequence of events, from when a user navigates to the page, and clicks a checkbox, through to when htmx swaps out the content and re-renders the view. </p>
+<p>You can see the requests and responses between the client (browser) and server (roc) starting from the top.</p>
+<img class="demo-img" src="/roc-htmx-demo-2/event-sequence.svg" alt="illustration of the sequence for a htmx event"/>
+<h2 id="step1"><a href="#step1">Step 1 Navigate to TreeView Page</a></h2>
+<p>The user navigates to <code>/treeview</code> and the server responds with the html for the <code>TreeView</code> page.</p>
+<pre><samp><span class="comment"># src/main.roc</span><span class="lowerident">
+
+handleReq</span><span class="kw"> :</span><span class="upperident"> Session</span><span class="delimeter">,</span><span class="upperident"> Str</span><span class="delimeter">,</span><span class="upperident"> Request</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="upperident"> Response</span><span class="lowerident"> _</span><span class="lowerident">
+handleReq</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">session</span><span class="delimeter">,</span><span class="lowerident"> dbPath</span><span class="delimeter">,</span><span class="lowerident"> req</span><span class="kw"> -&gt;</span><span class="comment">
+
+        # .. other handlers</span><span class="delimeter">
+
+        (</span><span class="upperident">Get</span><span class="delimeter">,</span><span class="delimeter"> [</span><span class="literal">"treeview"</span><span class="delimeter">]</span><span class="delimeter">)</span><span class="kw"> -&gt;</span><span class="comment"> # handler for "/treeview"</span><span class="comment">
+
+            # get the todos from the db in a tree structure</span><span class="lowerident">
+            nodes</span><span class="kw"> &lt;-</span><span class="upperident"> Sql</span><span class="delimeter">.</span><span class="upperident">Todo</span><span class="delimeter">.</span><span class="lowerident">tree</span><span class="delimeter"> {</span><span class="lowerident"> path</span><span class="kw">:</span><span class="lowerident"> dbPath</span><span class="delimeter">,</span><span class="lowerident"> userId</span><span class="kw">:</span><span class="literal"> 1</span><span class="delimeter"> }</span><span class="kw"> |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">await</span><span class="comment">
+
+            # render the page html with the todos displayed in a tree</span><span class="upperident">
+            Pages</span><span class="delimeter">.</span><span class="upperident">TreeView</span><span class="delimeter">.</span><span class="lowerident">view</span><span class="delimeter"> {</span><span class="lowerident"> session</span><span class="delimeter">,</span><span class="lowerident"> nodes</span><span class="delimeter"> }</span><span class="kw"> |&gt;</span><span class="lowerident"> htmlResponse</span><span class="kw"> |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">ok</span></samp></pre>
+<h2 id="step2"><a href="#step2">Step 2 &amp; 7 Retrieve Todos from SQLite</a></h2>
+<p>The server retrieves the <code>Todo</code>'s from the SQLite database and returns them as a tree structure.</p>
+<p>Each row of the query is of the form <code>[Integer id, String task, String status, Integer left, Integer right]</code> where the <code>left</code> and <code>right</code> values are used to represent the hierarchy of the <code>Todo</code>'s in a <a href="https://en.wikipedia.org/wiki/Nested_set_model">Nested Set</a>. In this representation, a node is a child if its <code>left</code> and <code>right</code> values are within the range of its parent's <code>left</code> and <code>right</code> values.</p>
+<pre><samp><span class="comment"># src/Sql/Todo.roc</span><span class="lowerident">
+
+tree</span><span class="kw"> :</span><span class="delimeter"> {</span><span class="lowerident"> path</span><span class="kw"> :</span><span class="upperident"> Str</span><span class="delimeter">,</span><span class="lowerident"> userId</span><span class="kw"> :</span><span class="upperident"> U64</span><span class="delimeter"> }</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="delimeter"> (</span><span class="upperident">Tree</span><span class="upperident"> Todo</span><span class="delimeter">)</span><span class="lowerident"> _</span><span class="lowerident">
+tree</span><span class="kw"> =</span><span class="kw"> \</span><span class="delimeter">{</span><span class="lowerident"> path</span><span class="delimeter">,</span><span class="lowerident"> userId</span><span class="delimeter"> }</span><span class="kw"> -&gt;</span><span class="comment">
+
+    # SQL query to get the todos</span><span class="lowerident">
+    query</span><span class="kw"> =</span><span class="literal">
+        """
+        SELECT 
+            tasks.id,
+            tasks.task,
+            tasks.status,
+            TaskHeirachy.lft,
+            TaskHeirachy.rgt
+        FROM
+            users
+            JOIN TaskHeirachy ON users.user_id = TaskHeirachy.user_id
+            JOIN tasks ON TaskHeirachy.task_id = tasks.id
+        WHERE
+            users.user_id = :user_id
+        ORDER BY
+            TaskHeirachy.lft;
+        """</span><span class="lowerident">
+
+    bindings</span><span class="kw"> =</span><span class="delimeter"> [</span><span class="delimeter">{</span><span class="lowerident"> name</span><span class="kw">:</span><span class="literal"> ":user_id"</span><span class="delimeter">,</span><span class="lowerident"> value</span><span class="kw">:</span><span class="upperident"> Num</span><span class="delimeter">.</span><span class="lowerident">toStr</span><span class="lowerident"> userId</span><span class="delimeter"> }</span><span class="delimeter">]</span><span class="upperident">
+
+    SQLite3</span><span class="delimeter">.</span><span class="lowerident">execute</span><span class="delimeter"> {</span><span class="lowerident"> path</span><span class="delimeter">,</span><span class="lowerident"> query</span><span class="delimeter">,</span><span class="lowerident"> bindings</span><span class="delimeter"> }</span><span class="kw">
+    |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">mapErr</span><span class="upperident"> SqlError</span><span class="kw">
+    |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="kw"> \</span><span class="lowerident">rows</span><span class="kw"> -&gt;</span><span class="lowerident"> parseTreeRows</span><span class="lowerident"> rows</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="lowerident">
+
+parseTreeRows</span><span class="kw"> :</span><span class="upperident"> List</span><span class="delimeter"> (</span><span class="upperident">List</span><span class="upperident"> SQLite3</span><span class="delimeter">.</span><span class="upperident">Value</span><span class="delimeter">)</span><span class="delimeter">,</span><span class="upperident"> List</span><span class="delimeter"> (</span><span class="upperident">NestedSet</span><span class="upperident"> Todo</span><span class="delimeter">)</span><span class="kw"> -&gt;</span><span class="upperident"> Tree</span><span class="upperident"> Todo</span><span class="lowerident">
+parseTreeRows</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">rows</span><span class="delimeter">,</span><span class="lowerident"> acc</span><span class="kw"> -&gt;</span><span class="kw">
+    when</span><span class="lowerident"> rows</span><span class="kw"> is</span><span class="comment">
+
+        # base case, translate the `acc` from `NestedSet`s to a `Tree`</span><span class="delimeter">
+        [</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="upperident"> Model</span><span class="delimeter">.</span><span class="lowerident">nestedSetToTree</span><span class="lowerident"> acc</span><span class="comment">
+
+        # recursive case, parse the rows and build up the `acc` list of `NestedSet`s</span><span class="delimeter">
+        [</span><span class="delimeter">[</span><span class="upperident">Integer</span><span class="lowerident"> id</span><span class="delimeter">,</span><span class="upperident"> String</span><span class="lowerident"> task</span><span class="delimeter">,</span><span class="upperident"> String</span><span class="lowerident"> status</span><span class="delimeter">,</span><span class="upperident"> Integer</span><span class="lowerident"> left</span><span class="delimeter">,</span><span class="upperident"> Integer</span><span class="lowerident"> right</span><span class="delimeter">]</span><span class="delimeter">,</span><span class="delimeter"> .</span><span class="delimeter">.</span><span class="kw"> as</span><span class="lowerident"> rest</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="lowerident">
+            todo</span><span class="kw"> :</span><span class="upperident"> Todo</span><span class="lowerident">
+            todo</span><span class="kw"> =</span><span class="delimeter"> {</span><span class="lowerident"> id</span><span class="delimeter">,</span><span class="lowerident"> task</span><span class="delimeter">,</span><span class="lowerident"> status</span><span class="delimeter"> }</span><span class="lowerident">
+
+            parseTreeRows</span><span class="lowerident"> rest</span><span class="delimeter"> (</span><span class="upperident">List</span><span class="delimeter">.</span><span class="lowerident">append</span><span class="lowerident"> acc</span><span class="delimeter"> {</span><span class="lowerident"> value</span><span class="kw">:</span><span class="lowerident"> todo</span><span class="delimeter">,</span><span class="lowerident"> left</span><span class="delimeter">,</span><span class="lowerident"> right</span><span class="delimeter"> }</span><span class="delimeter">)</span><span class="lowerident">
+
+        _</span><span class="kw"> -&gt;</span><span class="kw"> crash</span><span class="literal"> "unexpected values returned for getting Todos as a tree, got $(Inspect.toStr rows)"</span></samp></pre>
+<h2 id="step3"><a href="#step3">Step 3 Render TreeView Page</a></h2>
+<p>In the code below we can see how the <code>hx-put</code> attribute on the checkbox triggers a <code>PUT</code> request when the checkbox is clicked.</p>
+<pre><samp><span class="comment"># src/Pages/TreeView.roc</span><span class="comment">
+
+# view function to render the `Todo`s in a tree view</span><span class="lowerident">
+nodesView</span><span class="kw"> :</span><span class="upperident"> Tree</span><span class="upperident"> Todo</span><span class="kw"> -&gt;</span><span class="upperident"> Html</span><span class="delimeter">.</span><span class="upperident">Node</span><span class="lowerident">
+nodesView</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">node</span><span class="kw"> -&gt;</span><span class="kw">
+    when</span><span class="lowerident"> node</span><span class="kw"> is</span><span class="comment">
+
+        # empty tree, render a message</span><span class="upperident">
+        Empty</span><span class="kw"> -&gt;</span><span class="upperident"> Html</span><span class="delimeter">.</span><span class="lowerident">li</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="upperident">Html</span><span class="delimeter">.</span><span class="lowerident">text</span><span class="literal"> "EMPTY"</span><span class="delimeter">]</span><span class="comment">
+
+        # non-empty tree, render the `Todo` and its children recursively</span><span class="upperident">
+        Node</span><span class="lowerident"> todo</span><span class="lowerident"> children</span><span class="kw"> -&gt;</span><span class="comment">
+
+            # switch on the status of the todo to render the checkbox as either checked or not</span><span class="lowerident">
+            checkbox</span><span class="kw"> =</span><span class="kw"> 
+                if</span><span class="lowerident"> todo</span><span class="delimeter">.</span><span class="lowerident">status</span><span class="op"> ==</span><span class="literal"> "Completed"</span><span class="kw"> then</span><span class="lowerident">
+                    checkboxElem</span><span class="lowerident"> todo</span><span class="delimeter">.</span><span class="lowerident">task</span><span class="delimeter"> (</span><span class="upperident">Num</span><span class="delimeter">.</span><span class="lowerident">toStr</span><span class="lowerident"> todo</span><span class="delimeter">.</span><span class="lowerident">id</span><span class="delimeter">)</span><span class="upperident"> Checked</span><span class="kw">
+                else</span><span class="lowerident"> 
+                    checkboxElem</span><span class="lowerident"> todo</span><span class="delimeter">.</span><span class="lowerident">task</span><span class="delimeter"> (</span><span class="upperident">Num</span><span class="delimeter">.</span><span class="lowerident">toStr</span><span class="lowerident"> todo</span><span class="delimeter">.</span><span class="lowerident">id</span><span class="delimeter">)</span><span class="upperident"> NotChecked</span><span class="upperident">
+
+            Html</span><span class="delimeter">.</span><span class="lowerident">li</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="upperident">
+                Html</span><span class="delimeter">.</span><span class="lowerident">span</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">checkbox</span><span class="delimeter">]</span><span class="delimeter">,</span><span class="upperident">
+                Html</span><span class="delimeter">.</span><span class="lowerident">ul</span><span class="delimeter"> 
+                    [</span><span class="lowerident">class</span><span class="literal"> "todo-tree-ul"</span><span class="delimeter">]</span><span class="delimeter"> 
+                    (</span><span class="upperident">List</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="lowerident"> children</span><span class="lowerident"> nodesView</span><span class="delimeter">)</span><span class="delimeter">,</span><span class="comment">
+                    # we use recursion to render each of the child nodes</span><span class="delimeter">
+            ]</span><span class="comment">
+
+# helper view to render a single checkbox</span><span class="lowerident">
+checkboxElem</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">str</span><span class="delimeter">,</span><span class="lowerident"> taskIdStr</span><span class="delimeter">,</span><span class="lowerident"> check</span><span class="kw"> -&gt;</span><span class="delimeter">
+    (</span><span class="lowerident">checkAttrs</span><span class="delimeter">)</span><span class="kw"> =</span><span class="kw"> 
+        when</span><span class="lowerident"> check</span><span class="kw"> is</span><span class="upperident"> 
+            Checked</span><span class="kw"> -&gt;</span><span class="delimeter"> 
+                (</span><span class="delimeter">[</span><span class="comment">
+                    # clicks will tigger a PUT request to /task/2/in-progress</span><span class="delimeter">
+                    (</span><span class="lowerident">attribute</span><span class="literal"> "hx-put"</span><span class="delimeter">)</span><span class="literal"> "/task/$(taskIdStr)/in-progress"</span><span class="delimeter">,</span><span class="comment">
+                    # .. other attributes</span><span class="delimeter">
+                ]</span><span class="delimeter">)</span><span class="upperident"> 
+            NotChecked</span><span class="kw"> -&gt;</span><span class="delimeter"> 
+                (</span><span class="delimeter">[</span><span class="comment">
+                    # clicks will trigger a PUT request to /task/2/complete</span><span class="delimeter">
+                    (</span><span class="lowerident">attribute</span><span class="literal"> "hx-put"</span><span class="delimeter">)</span><span class="literal"> "/task/$(taskIdStr)/complete"</span><span class="delimeter">,</span><span class="comment">
+                    # .. other attributes</span><span class="delimeter">
+                ]</span><span class="delimeter">)</span><span class="upperident">
+
+    Html</span><span class="delimeter">.</span><span class="lowerident">div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "form-check"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="upperident">
+        Html</span><span class="delimeter">.</span><span class="lowerident">input</span><span class="lowerident"> checkAttrs</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter">,</span><span class="upperident">
+        Html</span><span class="delimeter">.</span><span class="lowerident">label</span><span class="delimeter"> [</span><span class="lowerident">
+            class</span><span class="literal"> "form-check-label"</span><span class="delimeter">,</span><span class="delimeter">
+        ]</span><span class="delimeter"> [</span><span class="upperident">
+            Html</span><span class="delimeter">.</span><span class="lowerident">text</span><span class="lowerident"> str</span><span class="delimeter">
+        ]</span><span class="delimeter">,</span><span class="delimeter">
+    ]</span></samp></pre>
+<h2 id="step4"><a href="#step4">Step 4 Click Todo Checkbox</a></h2>
+<p>The below image and html show the <code>Todo</code>'s displayed in a tree view with checkboxes. When a user clicks a checkbox, a <code>PUT</code> request is sent to the server to update the status of the <code>Todo</code>.</p>
+<img class="demo-img" src="/roc-htmx-demo-2/todo-tree-view.png" height="100px" alt="screen capture of the todo tree view"/>
+<pre><samp><span class="text xml"><span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;</span><span class="entity name tag localname xml">div</span> <span class="entity other attribute-name localname xml">class</span><span class="punctuation separator key-value xml">=</span><span class="string quoted double xml"><span class="punctuation definition string begin xml">&quot;</span>row justify-content-center<span class="punctuation definition string end xml">&quot;</span></span><span class="punctuation definition tag end xml">&gt;</span></span>
+    <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;</span><span class="entity name tag localname xml">ul</span> <span class="entity other attribute-name localname xml">class</span><span class="punctuation separator key-value xml">=</span><span class="string quoted double xml"><span class="punctuation definition string begin xml">&quot;</span>todo-tree-ul<span class="punctuation definition string end xml">&quot;</span></span><span class="punctuation definition tag end xml">&gt;</span></span>
+        <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;</span><span class="entity name tag localname xml">li</span><span class="punctuation definition tag end xml">&gt;</span></span><span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;</span><span class="entity name tag localname xml">span</span><span class="punctuation definition tag end xml">&gt;</span></span>
+                <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;</span><span class="entity name tag localname xml">div</span> <span class="entity other attribute-name localname xml">class</span><span class="punctuation separator key-value xml">=</span><span class="string quoted double xml"><span class="punctuation definition string begin xml">&quot;</span>form-check<span class="punctuation definition string end xml">&quot;</span></span><span class="punctuation definition tag end xml">&gt;</span></span>
+                    <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;</span><span class="entity name tag localname xml">input</span> <span class="entity other attribute-name localname xml">hx-put</span><span class="punctuation separator key-value xml">=</span><span class="string quoted double xml"><span class="punctuation definition string begin xml">&quot;</span>/task/0/in-progress<span class="punctuation definition string end xml">&quot;</span></span> <span class="entity other attribute-name localname xml">class</span><span class="punctuation separator key-value xml">=</span><span class="string quoted double xml"><span class="punctuation definition string begin xml">&quot;</span>form-check-input<span class="punctuation definition string end xml">&quot;</span></span> <span class="entity other attribute-name localname xml">type</span><span class="punctuation separator key-value xml">=</span><span class="string quoted double xml"><span class="punctuation definition string begin xml">&quot;</span>checkbox<span class="punctuation definition string end xml">&quot;</span></span> <span class="entity other attribute-name localname xml">value</span><span class="punctuation separator key-value xml">=</span><span class="string quoted double xml"><span class="punctuation definition string begin xml">&quot;</span><span class="punctuation definition string end xml">&quot;</span></span> <span class="entity other attribute-name localname xml">checked</span><span class="punctuation separator key-value xml">=</span><span class="string quoted double xml"><span class="punctuation definition string begin xml">&quot;</span><span class="punctuation definition string end xml">&quot;</span></span><span class="punctuation definition tag end xml">&gt;</span></span>
+                    <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;</span><span class="entity name tag localname xml">label</span> <span class="entity other attribute-name localname xml">class</span><span class="punctuation separator key-value xml">=</span><span class="string quoted double xml"><span class="punctuation definition string begin xml">&quot;</span>form-check-label<span class="punctuation definition string end xml">&quot;</span></span><span class="punctuation definition tag end xml">&gt;</span></span>Buy groceries<span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;/</span><span class="entity name tag localname xml">label</span><span class="punctuation definition tag end xml">&gt;</span></span>
+                    <span class="comment block xml"><span class="punctuation definition comment begin xml">&lt;!--</span> note the hx-put attribute on the input element <span class="punctuation definition comment end xml">--&gt;</span></span>
+                <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;/</span><span class="entity name tag localname xml">div</span><span class="punctuation definition tag end xml">&gt;</span></span>
+            <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;/</span><span class="entity name tag localname xml">span</span><span class="punctuation definition tag end xml">&gt;</span></span>
+            <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;</span><span class="entity name tag localname xml">ul</span> <span class="entity other attribute-name localname xml">class</span><span class="punctuation separator key-value xml">=</span><span class="string quoted double xml"><span class="punctuation definition string begin xml">&quot;</span>todo-tree-ul<span class="punctuation definition string end xml">&quot;</span></span><span class="punctuation definition tag end xml">&gt;</span></span>
+                <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;</span><span class="entity name tag localname xml">li</span><span class="punctuation definition tag end xml">&gt;</span></span>
+                    <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;</span><span class="entity name tag localname xml">span</span><span class="punctuation definition tag end xml">&gt;</span></span>
+                        <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;</span><span class="entity name tag localname xml">div</span> <span class="entity other attribute-name localname xml">class</span><span class="punctuation separator key-value xml">=</span><span class="string quoted double xml"><span class="punctuation definition string begin xml">&quot;</span>form-check<span class="punctuation definition string end xml">&quot;</span></span><span class="punctuation definition tag end xml">&gt;</span></span>
+                            <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;</span><span class="entity name tag localname xml">input</span> <span class="entity other attribute-name localname xml">hx-put</span><span class="punctuation separator key-value xml">=</span><span class="string quoted double xml"><span class="punctuation definition string begin xml">&quot;</span>/task/1/complete<span class="punctuation definition string end xml">&quot;</span></span> <span class="entity other attribute-name localname xml">class</span><span class="punctuation separator key-value xml">=</span><span class="string quoted double xml"><span class="punctuation definition string begin xml">&quot;</span>form-check-input<span class="punctuation definition string end xml">&quot;</span></span> <span class="entity other attribute-name localname xml">type</span><span class="punctuation separator key-value xml">=</span><span class="string quoted double xml"><span class="punctuation definition string begin xml">&quot;</span>checkbox<span class="punctuation definition string end xml">&quot;</span></span> <span class="entity other attribute-name localname xml">value</span><span class="punctuation separator key-value xml">=</span><span class="string quoted double xml"><span class="punctuation definition string begin xml">&quot;</span><span class="punctuation definition string end xml">&quot;</span></span><span class="punctuation definition tag end xml">&gt;</span></span>
+                            <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;</span><span class="entity name tag localname xml">label</span> <span class="entity other attribute-name localname xml">class</span><span class="punctuation separator key-value xml">=</span><span class="string quoted double xml"><span class="punctuation definition string begin xml">&quot;</span>form-check-label<span class="punctuation definition string end xml">&quot;</span></span><span class="punctuation definition tag end xml">&gt;</span></span>Finish that assignment<span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;/</span><span class="entity name tag localname xml">label</span><span class="punctuation definition tag end xml">&gt;</span></span>
+                        <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;/</span><span class="entity name tag localname xml">div</span><span class="punctuation definition tag end xml">&gt;</span></span>
+                    <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;/</span><span class="entity name tag localname xml">span</span><span class="punctuation definition tag end xml">&gt;</span></span>
+                    <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;</span><span class="entity name tag localname xml">ul</span> <span class="entity other attribute-name localname xml">class</span><span class="punctuation separator key-value xml">=</span><span class="string quoted double xml"><span class="punctuation definition string begin xml">&quot;</span>todo-tree-ul<span class="punctuation definition string end xml">&quot;</span></span><span class="punctuation definition tag end xml">&gt;</span></span><span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;/</span><span class="entity name tag localname xml">ul</span><span class="punctuation definition tag end xml">&gt;</span></span>
+                <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;/</span><span class="entity name tag localname xml">li</span><span class="punctuation definition tag end xml">&gt;</span></span>
+                <span class="comment block xml"><span class="punctuation definition comment begin xml">&lt;!--</span> other elements removed <span class="punctuation definition comment end xml">--&gt;</span></span>
+            <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;/</span><span class="entity name tag localname xml">ul</span><span class="punctuation definition tag end xml">&gt;</span></span>
+        <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;/</span><span class="entity name tag localname xml">li</span><span class="punctuation definition tag end xml">&gt;</span></span>
+    <span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;/</span><span class="entity name tag localname xml">ul</span><span class="punctuation definition tag end xml">&gt;</span></span>
+<span class="meta tag xml"><span class="punctuation definition tag begin xml">&lt;/</span><span class="entity name tag localname xml">div</span><span class="punctuation definition tag end xml">&gt;</span></span>
+</span></pre></samp>
+<h2 id="step5"><a href="#step5">Step 5 Update SQL then HX-Trigger response</a></h2>
+<p>After the server updates the DB, it responds with a header <code>HX-Trigger: todosUpdated</code>.</p>
+<pre><samp><span class="comment"># src/main.roc</span><span class="lowerident">
+
+handleReq</span><span class="kw"> :</span><span class="upperident"> Session</span><span class="delimeter">,</span><span class="upperident"> Str</span><span class="delimeter">,</span><span class="upperident"> Request</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="upperident"> Response</span><span class="lowerident"> _</span><span class="lowerident">
+handleReq</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">session</span><span class="delimeter">,</span><span class="lowerident"> dbPath</span><span class="delimeter">,</span><span class="lowerident"> req</span><span class="kw"> -&gt;</span><span class="comment">
+
+        # .. other handlers removed</span><span class="delimeter">
+
+        (</span><span class="upperident">Put</span><span class="delimeter">,</span><span class="delimeter"> [</span><span class="literal">"task"</span><span class="delimeter">,</span><span class="lowerident"> taskIdStr</span><span class="delimeter">,</span><span class="literal"> "complete"</span><span class="delimeter">]</span><span class="delimeter">)</span><span class="kw"> -&gt;</span><span class="comment"> # handler for "/task/&lt;id&gt;/complete"</span><span class="delimeter">
+
+            {</span><span class="delimeter">}</span><span class="kw"> &lt;-</span><span class="upperident"> Sql</span><span class="delimeter">.</span><span class="upperident">Todo</span><span class="delimeter">.</span><span class="lowerident">update</span><span class="delimeter"> {</span><span class="lowerident"> path</span><span class="kw">:</span><span class="lowerident"> dbPath</span><span class="delimeter">,</span><span class="lowerident"> taskIdStr</span><span class="delimeter">,</span><span class="lowerident"> action</span><span class="kw">:</span><span class="upperident"> Completed</span><span class="delimeter"> }</span><span class="kw"> |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">await</span><span class="lowerident">
+
+            triggerResponse</span><span class="literal"> "todosUpdated"</span><span class="delimeter">
+
+        (</span><span class="upperident">Put</span><span class="delimeter">,</span><span class="delimeter"> [</span><span class="literal">"task"</span><span class="delimeter">,</span><span class="lowerident"> taskIdStr</span><span class="delimeter">,</span><span class="literal"> "in-progress"</span><span class="delimeter">]</span><span class="delimeter">)</span><span class="kw"> -&gt;</span><span class="comment"> # handler for "/task/&lt;id&gt;/in-progress"</span><span class="delimeter">
+
+            {</span><span class="delimeter">}</span><span class="kw"> &lt;-</span><span class="upperident"> Sql</span><span class="delimeter">.</span><span class="upperident">Todo</span><span class="delimeter">.</span><span class="lowerident">update</span><span class="delimeter"> {</span><span class="lowerident"> path</span><span class="kw">:</span><span class="lowerident"> dbPath</span><span class="delimeter">,</span><span class="lowerident"> taskIdStr</span><span class="delimeter">,</span><span class="lowerident"> action</span><span class="kw">:</span><span class="upperident"> InProgress</span><span class="delimeter"> }</span><span class="kw"> |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">await</span><span class="lowerident">
+
+            triggerResponse</span><span class="literal"> "todosUpdated"</span><span class="lowerident">
+
+triggerResponse</span><span class="kw"> :</span><span class="upperident"> Str</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="upperident"> Response</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="lowerident">_</span><span class="lowerident">
+triggerResponse</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">trigger</span><span class="kw"> -&gt;</span><span class="upperident">
+    Task</span><span class="delimeter">.</span><span class="lowerident">ok</span><span class="delimeter"> {</span><span class="lowerident">
+        status</span><span class="kw">:</span><span class="literal"> 200</span><span class="delimeter">,</span><span class="lowerident">
+        headers</span><span class="kw">:</span><span class="delimeter"> [</span><span class="delimeter">
+            {</span><span class="lowerident"> name</span><span class="kw">:</span><span class="literal"> "HX-Trigger"</span><span class="delimeter">,</span><span class="lowerident"> value</span><span class="kw">:</span><span class="upperident"> Str</span><span class="delimeter">.</span><span class="lowerident">toUtf8</span><span class="lowerident"> trigger</span><span class="delimeter"> }</span><span class="delimeter">,</span><span class="delimeter">
+        ]</span><span class="delimeter">,</span><span class="lowerident">
+        body</span><span class="kw">:</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter">,</span><span class="delimeter">
+    }</span></samp></pre>
+<h2 id="step6"><a href="#step6">Step 6 Handle Event</a></h2>
+<p>The <code>(attribute "hx-trigger") "todosUpdated from:body"</code> registers a listener for the <code>todosUpdated</code> event on the body element. </p>
+<p>When the <code>todosUpdated</code> event is triggered by the response, it bubbles up to the <code>body</code> element which then triggers the page to render.</p>
+<pre><samp><span class="comment"># src/Pages/TreeView.roc</span><span class="lowerident">
+
+view</span><span class="kw"> :</span><span class="delimeter"> {</span><span class="lowerident">
+    session</span><span class="kw"> :</span><span class="upperident"> Session</span><span class="delimeter">,</span><span class="lowerident">
+    nodes</span><span class="kw"> :</span><span class="upperident"> Tree</span><span class="upperident"> Todo</span><span class="delimeter">,</span><span class="delimeter">
+}</span><span class="kw"> -&gt;</span><span class="upperident"> Html</span><span class="delimeter">.</span><span class="upperident">Node</span><span class="lowerident">
+view</span><span class="kw"> =</span><span class="kw"> \</span><span class="delimeter">{</span><span class="lowerident"> session</span><span class="delimeter">,</span><span class="lowerident"> nodes</span><span class="delimeter"> }</span><span class="kw"> -&gt;</span><span class="lowerident">
+    layout</span><span class="delimeter">
+        {</span><span class="lowerident">
+            session</span><span class="delimeter">,</span><span class="lowerident">
+            description</span><span class="kw">:</span><span class="literal"> "TREE VIEW PAGE"</span><span class="delimeter">,</span><span class="lowerident">
+            title</span><span class="kw">:</span><span class="literal"> "TREE VIEW"</span><span class="delimeter">,</span><span class="lowerident">
+            navLinks</span><span class="kw">:</span><span class="upperident"> NavLinks</span><span class="delimeter">.</span><span class="lowerident">navLinks</span><span class="literal"> "TreeView"</span><span class="delimeter">,</span><span class="delimeter">
+        }</span><span class="delimeter">
+        [</span><span class="upperident">
+            Html</span><span class="delimeter">.</span><span class="lowerident">div</span><span class="delimeter"> [</span><span class="lowerident">
+                class</span><span class="literal"> "container"</span><span class="delimeter">,</span><span class="delimeter">
+                (</span><span class="lowerident">attribute</span><span class="literal"> "hx-trigger"</span><span class="delimeter">)</span><span class="literal"> "todosUpdated from:body"</span><span class="comment"> # listen for the `todosUpdated` event</span><span class="delimeter">
+                (</span><span class="lowerident">attribute</span><span class="literal"> "hx-get"</span><span class="delimeter">)</span><span class="literal"> "/treeview"</span><span class="delimeter">,</span><span class="comment"> # send an AJAX request to get the page</span><span class="delimeter">
+                (</span><span class="lowerident">attribute</span><span class="literal"> "hx-target"</span><span class="delimeter">)</span><span class="literal"> "body"</span><span class="delimeter">,</span><span class="comment"> # then swap the html into the body element</span><span class="delimeter">
+            ]</span><span class="delimeter"> [</span><span class="upperident">
+                Html</span><span class="delimeter">.</span><span class="lowerident">div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "row justify-content-center"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="upperident">
+                    Html</span><span class="delimeter">.</span><span class="lowerident">ul</span><span class="delimeter"> [</span><span class="lowerident">
+                        class</span><span class="literal"> "todo-tree-ul"</span><span class="delimeter">,</span><span class="delimeter">
+                    ]</span><span class="delimeter"> [</span><span class="lowerident">
+                        nodesView</span><span class="lowerident"> nodes</span><span class="delimeter"> 
+                    ]</span><span class="delimeter">
+                ]</span><span class="delimeter">,</span><span class="delimeter">
+            ]</span><span class="delimeter">,</span><span class="delimeter">
+        ]</span></samp></pre>
+<h2 id="step8"><a href="#step8">Step 8 Re-render TreeView</a></h2>
+<p>The html that is returned from the server is displayed to the user in the browser, which is similar to <a href="#step3">Step 3</a>.</p>
+<p>However, unlike previously, htmx swaps out the content of the <code>body</code> element with the new html instead of reloading the page and other assets like css and js.</p>
+<p>This can be seen in the <a href="#step6">Step 6</a> code example. </p>
+<p>When the event is triggered, the attribute <code>(attribute "hx-get") "/treeview"</code> directs that an AJAX request be sent to <code>/treeview</code> and then <code>(attribute "hx-target") "body"</code> instructs the response html to be swapped into the <code>body</code>.</p>
+<h1 id="reflection"><a href="#reflection">Reflection</a></h1>
+<p>TODO</p>
+</main><footer></footer></body></html>
