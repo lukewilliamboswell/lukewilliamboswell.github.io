@@ -2,7 +2,7 @@
 
 # Fullstack Roc + htmx - Events 
 
-<time class="post-date" datetime="2024-02-27">27 Jan 2024</time> *~15 mins reading time*
+<time class="post-date" datetime="2024-02-27">27 Feb 2024</time> *~15 mins reading time*
 
 I want to share what I have learnt about [htmx events](https://htmx.org/examples/update-other-content/#events) by experimenting with [lukewilliamboswell/roc-htmx-playground](https://github.com/lukewilliamboswell/roc-htmx-playground/).
 
