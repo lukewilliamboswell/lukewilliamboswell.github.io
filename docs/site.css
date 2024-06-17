@@ -68,10 +68,10 @@ main {
 }
 
 .demo-img {
-    max-width: 80%;
+    max-width: 90%;
     display: block;
-    margin: 1em auto;
-    box-shadow: 0 0 1em var(--gray);
+    margin: 0.5em auto;
+    box-shadow: 0 0 0.25em var(--gray);
 }
 
 a {
@@ -244,7 +244,6 @@ ul.links li a:hover {
     background-color: var(--code-bg);
 }
 
-
 .source.c {
     color: var(--blue); /* General color for source code */
 }
@@ -253,7 +252,8 @@ ul.links li a:hover {
     color: var(--cyan); /* Style for storage types, like 'void' */
 }
 
-.meta.function-call.c, .meta.block.c {
+.meta.function-call.c,
+.meta.block.c {
     color: var(--text-color); /* Style for function calls and blocks */
 }
 
@@ -261,7 +261,8 @@ ul.links li a:hover {
     color: var(--violet); /* Style for function variables */
 }
 
-.keyword.operator.arithmetic.c, .keyword.operator.assignment.c {
+.keyword.operator.arithmetic.c,
+.keyword.operator.assignment.c {
     color: var(--orange); /* Style for operators */
 }
 
@@ -269,16 +270,17 @@ ul.links li a:hover {
     color: var(--cyan); /* Style for numeric constants */
 }
 
-.punctuation.section.group.begin.c, .punctuation.section.group.end.c,
-.punctuation.section.block.begin.c, .punctuation.section.block.end.c,
+.punctuation.section.group.begin.c,
+.punctuation.section.group.end.c,
+.punctuation.section.block.begin.c,
+.punctuation.section.block.end.c,
 .punctuation.separator.c {
     color: var(--blue); /* Style for punctuation */
 }
 
 .entity.name.label.c {
-    color: var(--green) /* Style for labels like 'entry' */
+    color: var(--green); /* Style for labels like 'entry' */
 }
-
 
 /* Styling for tags */
 .meta.tag.xml {
@@ -286,23 +288,36 @@ ul.links li a:hover {
 }
 
 /* Styling for punctuation */
-.punctuation.definition.tag.begin.xml, .punctuation.definition.tag.end.xml,
-.punctuation.separator.key-value.xml, .punctuation.definition.string.begin.xml,
+.punctuation.definition.tag.begin.xml,
+.punctuation.definition.tag.end.xml,
+.punctuation.separator.key-value.xml,
+.punctuation.definition.string.begin.xml,
 .punctuation.definition.string.end.xml {
     color: var(--gray);
 }
 
 /* Styling for tag names and attributes */
-.entity.name.tag.localname.xml, .entity.other.attribute-name.localname.xml {
+.entity.name.tag.localname.xml,
+.entity.other.attribute-name.localname.xml {
     color: var(--blue);
 }
 
 /* Styling for attribute values (strings) */
 .string.quoted.double.xml {
-    color: var(--orange); 
+    color: var(--orange);
 }
 
 /* Styling for comments */
 .comment.block.xml {
     color: var(--green);
+}
+
+.container {
+    display: flex;
+    justify-content: space-between;
+}
+.container img {
+    max-width: 45%;
+    height: auto;
+    object-fit: scale-down;
 }

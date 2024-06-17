@@ -1,10 +1,27 @@
-app "website"
-    packages { pf: "../roc/examples/static-site-gen/platform/main.roc" }
-    imports [
-        pf.Html.{ Node, html, head, body, footer, main, text, link, meta },
-        pf.Html.Attributes.{ content, name, id, href, rel, lang, class, charset },
-    ]
-    provides [transformFileContent] to pf
+app [main] { pf: platform "https://github.com/lukewilliamboswell/basic-ssg/releases/download/0.1.0/EMH2OFwcXCUEzbwP6gyfeRQu7Phr-slc-vE8FPPreys.tar.br" }
+
+import pf.Task exposing [Task]
+import pf.SSG
+import pf.Types exposing [Args]
+import pf.Html exposing [link, footer, text, html, head, body, meta]
+import pf.Html.Attributes exposing [class, name, id, charset, href, rel, content, lang]
+
+main : Args -> Task {} _
+main = \{ inputDir, outputDir } ->
+
+    # get the path and url of markdown files in content directory
+    files = SSG.files! inputDir
+
+    # helper Task to process each file
+    processFile = \{ path, relpath, url } ->
+
+        inHtml = SSG.parseMarkdown! path
+
+        outHtml = transformFileContent url inHtml
+
+        SSG.writeFile { outputDir, relpath, content: outHtml }
+    ## process each file
+    Task.forEach! files processFile
 
 pageData =
     Dict.empty {}
@@ -43,7 +60,7 @@ view = \page, htmlContent ->
             link [rel "stylesheet", href "/site.css"],
         ],
         body bodyAttrs [
-            main [] mainBody,
+            Html.main [] mainBody,
             footer [] [],
         ],
     ]
