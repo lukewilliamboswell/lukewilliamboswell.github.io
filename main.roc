@@ -3,8 +3,8 @@ app [main] { pf: platform "https://github.com/lukewilliamboswell/basic-ssg/relea
 import pf.Task exposing [Task]
 import pf.SSG
 import pf.Types exposing [Args]
-import pf.Html exposing [link, footer, text, html, head, body, meta]
-import pf.Html.Attributes exposing [class, name, id, charset, href, rel, content, lang]
+import pf.Html exposing [link, script, footer, text, html, head, body, meta]
+import pf.Html.Attributes exposing [attribute, class, src, name, id, charset, href, rel, content, lang]
 
 main : Args -> Task {} _
 main = \{ inputDir, outputDir } ->
@@ -58,6 +58,22 @@ view = \page, htmlContent ->
             meta [name "description", content (getDescription page)],
             meta [name "viewport", content "width=device-width"],
             link [rel "stylesheet", href "/site.css"],
+
+            # <!-- Google tag (gtag.js) -->
+            script [
+                (attribute "async") "",
+                src "https://www.googletagmanager.com/gtag/js?id=G-WP50D6PVC3",
+            ] [],
+            script [] [
+                text
+                    """
+                    window.dataLayer = window.dataLayer || [];
+                    function gtag(){dataLayer.push(arguments);}
+                    gtag('js', new Date());
+
+                    gtag('config', 'G-WP50D6PVC3');
+                    """
+            ],
         ],
         body bodyAttrs [
             Html.main [] mainBody,
