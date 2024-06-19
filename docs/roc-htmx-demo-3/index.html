@@ -1,25 +1,39 @@
 <!DOCTYPE html><html  lang="en" class="no-js"><head><meta  charset="utf-8"><title></title><meta  name="description" content=""><meta  name="viewport" content="width=device-width"><link  rel="stylesheet" href="/site.css"></head><body  id="index-page"><main><p><a href="/">Return to Home</a></p>
 <h1>Fullstack Roc + htmx—Data Table</h1>
-<p><time class="post-date" datetime="2024-06-20">20 Jun 2024</time> <em>~15 mins reading time</em></p>
-<p>In this article I continue experimenting with <a href="https://github.com/lukewilliamboswell/roc-htmx-playground/">lukewilliamboswell/roc-htmx-playground</a> and build a Data Table. The inspiration for this comes from the idea of having a table in an SQL database, and wanting a simple way to display and edit this using fullstack roc + htmx.</p>
-<p>There were a few things I wanted to explore with this including; making individual columns sortable, pagination and filtering the table results, making a download button to get the data as a CSV.</p>
-<p>In summary I have been very pleased with the experience writing this demo, and I am convinced this will be a great way to build larger web applications in the future as roc matures.</p>
+<p><time class="post-date" datetime="2024-06-19">19 Jun 2024</time> <em>~15 mins reading time</em></p>
+<ul>
+<li><a href="#demo">Demonstration</a></li>
+<li><a href="#mvc">Refactor into Model-View-Controller</a></li>
+<li><a href="#bigtask-controller">The BigTask Controller</a></li>
+<li><a href="#protecting-routes">Protecting Routes</a></li>
+<li><a href="#bigtask-list">GET '/'—List BigTasks</a></li>
+<li><a href="#render-page">Views.BigTask.page</a></li>
+<li><a href="#data-table-input">Data Table Inputs</a></li>
+<li><a href="#render-data-table">Views.Bootstrap.renderDataTable</a></li>
+<li><a href="#put-update-data">PUT '/customerID/<id>'—Update CustomerReferenceID</a></li>
+<li><a href="#validation">Form Input Validaiton</a></li>
+<li><a href="#download-csv">Download CSV Data</a></li>
+<li><a href="#client-state">Client-side State Management</a></li>
+<li><a href="#final-thoughts">Final thoughts</a></li>
+</ul>
+<p>In this article, I continue experimenting with <a href="https://github.com/lukewilliamboswell/roc-htmx-playground/">lukewilliamboswell/roc-htmx-playground</a> and build a Data Table. The inspiration for this comes from the idea of having a table in an SQL database and wanting a simple way to display and edit this using fullstack roc + htmx.</p>
+<p>There were a few things I wanted to explore with this including; making individual columns sortable, pagination, filtering the table results, and making a download button to get the data as a CSV.</p>
+<p>In summary, I have been very pleased with the experience writing this demo, and I am convinced this will be a great way to build larger web applications in the future.</p>
 <p>Here is a demonstration of the data table in action.</p>
-<h1 id="demo"><a href="#demo">Demonstration</a></h1>
-<p>Code for this article available at <a href="https://github.com/lukewilliamboswell/roc-htmx-playground/tree/18c94a7afa1e10767c209c5e1b7538ce31eca12d">this commit</a>.</p>
+<h2 id="demo"><a href="#demo">Demonstration</a></h2>
+<p>Code for this article is available at <a href="https://github.com/lukewilliamboswell/roc-htmx-playground/tree/18c94a7afa1e10767c209c5e1b7538ce31eca12d">this commit</a>.</p>
 <img class="demo-img" src="/roc-htmx-demo-3/demo.gif" alt="screen capture of the application being used"/>
-<h1 id="mvc"><a href="#mvc">Refactor into Model-View-Controller</a></h1>
-<p>While writing the roc code for this demo, I found myself naturally refactoring the code as I went. It was such a pleasant experience discovering a new pattern and then cleaning up tech debt incrementally.</p>
-<p>But after a while I noticed that I had something similar to an MVC pattern emerging in how I was structuring the code.</p>
-<p>I recalled hearing <a href="https://bigsky.software/cv/">Carson Gross</a> the creator of HTMX talking about this pattern, so figured I would rename the modules, and commit to testing this out. So far it has been working nicely.</p>
+<h2 id="mvc"><a href="#mvc">Refactor into Model-View-Controller</a></h2>
+<p>While writing the code for this demo, I found myself naturally refactoring as I went. It was such a pleasant experience discovering a new pattern and incrementally cleaning up tech debt.</p>
+<p>After several changes, I noticed an MVC pattern emerging in how I was structuring the code. I recall hearing <a href="https://bigsky.software/cv/">Carson Gross</a> the creator of HTMX talking about this pattern from a podcast, so figured I would rename the modules, and commit to testing this out. So far it has been working nicely and I haven't found any issues working with roc modules.</p>
 <p>The main components are:</p>
 <ul>
 <li><strong>Models</strong> are the data structures and logic without any dependencies. These modules are where the &quot;business logic&quot; of my application is implemented.</li>
-<li><strong>Views</strong> are pure functions and helpers to render data structures (such as defiend in the Models) to HTML.</li>
+<li><strong>Views</strong> are pure functions and helpers to render data structures (such as defined in the Models) to HTML.</li>
 <li><strong>Controllers</strong> define and handle the routes for HTTP requests. Things like parsing URL query parameters or form submissions, making SQL queries to the DB, and handling invalid requests happen in these modules.</li>
 </ul>
-<h1 id="bigtask-controller"><a href="#bigtask-controller">The BigTask Controller</a></h1>
-<p>I defined a top level function <code>respond</code> to take a <code>Request</code> along with additional parameters.</p>
+<h2 id="bigtask-controller"><a href="#bigtask-controller">The BigTask Controller</a></h2>
+<p>The BigTask controller is a top-level function that takes a <code>Request</code> along with additional parameters.</p>
 <pre><samp><span class="comment"># src/Controllers/BigTask.roc</span><span class="lowerident">
 respond</span><span class="kw"> :</span><span class="delimeter"> {</span><span class="lowerident">
     req</span><span class="kw"> :</span><span class="upperident"> Request</span><span class="delimeter">,</span><span class="lowerident">
@@ -27,10 +41,9 @@ respond</span><span class="kw"> :</span><span class="delimeter"> {</span><span c
     dbPath</span><span class="kw"> :</span><span class="upperident"> Str</span><span class="delimeter">,</span><span class="lowerident">
     session</span><span class="kw"> :</span><span class="upperident"> Session</span><span class="delimeter">,</span><span class="delimeter">
 }</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="upperident"> Response</span><span class="lowerident"> _</span></samp></pre>
-<p>In <code>main.roc</code> this is called to handle all of the requests that start with the url segment <code>/bigTask</code>. This separated out all of the BigTask logic into a separate module which is easier to manage and hopefully in future will be easier to test.</p>
-<pre><samp><span class="comment"># main.roc</span><span class="comment">
-# handle all requests for url segments starting with "/bigTask"</span><span class="comment">
-# e.g. GET, PUT, POST, DELETE /bigTask</span><span class="delimeter">
+<p>This is called in <code>main.roc</code> to handle all of the requests that start with the url segment <code>/bigTask</code>.</p>
+<pre><samp><span class="comment"># main.roc</span><span class="delimeter">
+
 (</span><span class="lowerident">_</span><span class="delimeter">,</span><span class="delimeter"> [</span><span class="literal">"bigTask"</span><span class="delimeter">,</span><span class="delimeter"> .</span><span class="delimeter">.</span><span class="delimeter">]</span><span class="delimeter">)</span><span class="kw"> -&gt;</span><span class="upperident">
     Controllers</span><span class="delimeter">.</span><span class="upperident">BigTask</span><span class="delimeter">.</span><span class="lowerident">respond</span><span class="delimeter"> {</span><span class="lowerident">
         req</span><span class="delimeter">,</span><span class="lowerident">
@@ -38,9 +51,9 @@ respond</span><span class="kw"> :</span><span class="delimeter"> {</span><span c
         dbPath</span><span class="delimeter">,</span><span class="lowerident">
         session</span><span class="delimeter">,</span><span class="delimeter">
     }</span></samp></pre>
-<p>You can see here that the <code>respond</code> handler is passed it's dependencies, including the url segments, path to the SQLite3 database, and the current session parsed from request headers.</p>
-<p>Another reason I separated this out into a module is that I wanted to test the idea of &quot;protecting&quot; the routes. I figured I would have the BigTask routes only available to authenticated users and if someone is a <code>Guest</code> then they shouldn't be able to access this information.</p>
-<p>One advantage of having our logic managed in the server (as opposed to in a client side application) is that it is much easier to verify the user is authenticated. The session is managed in our DB, and so we can confirm the user has previously authenticated.</p>
+<h2 id="protecting-routes"><a href="#protecting-routes">Protecting Routes</a></h2>
+<p>I wanted to test the idea of how to &quot;protect&quot; some routes, so they are only available to authenticated users. If someone is a <code>Guest</code> they shouldn't be able to access sensitive information. Instead, the server should respond appropriately with an error message.</p>
+<p>All of our app logic is managed in the server (as opposed to in a client-side application), so it is much easier to verify the user is authenticated. The session is managed in the database, so we can confirm the user has previously authenticated using a simple helper function.</p>
 <pre><samp><span class="comment"># src/Models/Session.roc</span><span class="lowerident">
 isAuthenticated</span><span class="kw"> :</span><span class="delimeter"> [</span><span class="upperident">Guest</span><span class="delimeter">,</span><span class="upperident"> LoggedIn</span><span class="upperident"> Str</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="upperident"> Result</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="delimeter"> [</span><span class="upperident">Unauthorized</span><span class="delimeter">]</span><span class="lowerident">
 isAuthenticated</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">user</span><span class="kw"> -&gt;</span><span class="kw">
@@ -48,37 +61,28 @@ isAuthenticated</span><span class="kw"> =</span><span class="kw"> \</span><span 
         Err</span><span class="upperident"> Unauthorized</span><span class="kw">
     else</span><span class="upperident">
         Ok</span><span class="delimeter"> {</span><span class="delimeter">}</span></samp></pre>
-<p>The function <code>isAuthenticated</code> will take the user, and if they are a <code>Guest</code> return an <code>Err Unauthorized</code>. In our controller we pipe this into <code>Task.fromResult!</code> which will short-circuit our respond handler.</p>
-<pre><samp><span class="comment"># src/Controllers/BigTask.roc</span><span class="comment">
-# confirm the user is Authenticated, these routes are all protected</span><span class="upperident">
-Models</span><span class="delimeter">.</span><span class="upperident">Session</span><span class="delimeter">.</span><span class="lowerident">isAuthenticated</span><span class="lowerident"> session</span><span class="delimeter">.</span><span class="lowerident">user</span><span class="kw"> |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">fromResult</span><span class="op">!</span><span class="comment">
+<p>The function <code>isAuthenticated</code> will take the user, and if they are a <code>Guest</code> return an <code>Err Unauthorized</code>. In our controller, we pipe this into <code>Task.fromResult!</code> which will short-circuit to our top-level handler.</p>
+<pre><samp><span class="upperident">Models</span><span class="delimeter">.</span><span class="upperident">Session</span><span class="delimeter">.</span><span class="lowerident">isAuthenticated</span><span class="lowerident"> session</span><span class="delimeter">.</span><span class="lowerident">user</span><span class="kw"> |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">fromResult</span><span class="op">!</span><span class="comment">
 
-# ... continue with other BigTask routes</span><span class="comment">
-# that cannot be reached if the user is a Guest</span></samp></pre>
-<p>The <code>Err Unauthorized</code> is then caught in our top-level error handler and transformed into a unauthorized HTML page response.</p>
+# ... continue to handle sensitive routes</span></samp></pre>
+<p>Any <code>Err Unauthorized</code> will be caught in our top-level error handler and transformed into an unauthorized HTML page response.</p>
 <pre><samp><span class="lowerident">main</span><span class="kw"> :</span><span class="upperident"> Request</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="upperident"> Response</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="lowerident">
 main</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">req</span><span class="kw"> -&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">onErr</span><span class="delimeter"> (</span><span class="lowerident">handleReq</span><span class="lowerident"> req</span><span class="delimeter">)</span><span class="kw"> \</span><span class="lowerident">err</span><span class="kw"> -&gt;</span><span class="kw">
-    when</span><span class="lowerident"> err</span><span class="kw"> is</span><span class="comment">
+    when</span><span class="lowerident"> err</span><span class="kw"> is</span><span class="upperident">
+        Unauthorized</span><span class="kw"> -&gt;</span><span class="upperident">
+            Views</span><span class="delimeter">.</span><span class="upperident">Unauthorised</span><span class="delimeter">.</span><span class="lowerident">page</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="kw"> |&gt;</span><span class="lowerident"> respondHtml</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="comment">
 
-        # ... other error cases like BadRequest, NotFound, etc.</span><span class="upperident">
-
-        Unauthorized</span><span class="kw"> -&gt;</span><span class="lowerident">
-            import</span><span class="upperident"> Views</span><span class="delimeter">.</span><span class="upperident">Unauthorised</span><span class="upperident">
-            Views</span><span class="delimeter">.</span><span class="upperident">Unauthorised</span><span class="delimeter">.</span><span class="lowerident">page</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="kw"> |&gt;</span><span class="lowerident"> respondHtml</span><span class="delimeter"> [</span><span class="delimeter">]</span></samp></pre>
-<h1 id="bigtask-list"><a href="#bigtask-list">GET '/'—List BigTasks </a></h1>
+        # ... handle other errors like BadRequest, NotFound, etc.</span></samp></pre>
+<h2 id="bigtask-list"><a href="#bigtask-list">GET '/'—List BigTasks</a></h2>
 <p>The first route on our BigTask controller returns our data table.</p>
 <p>We start by parsing all of the relevant query parameters from the URL so we can use them to filter, sort, and paginate the data.</p>
-<pre><samp><span class="comment"># src/Controllers/BigTask.roc</span><span class="comment">
+<pre><samp><span class="comment"># src/Controllers/BigTask.roc</span><span class="lowerident">
 
-# parse the query parameters from the URL</span><span class="lowerident">
 queryParams</span><span class="kw"> =</span><span class="lowerident">
     req</span><span class="delimeter">.</span><span class="lowerident">url</span><span class="kw">
     |&gt;</span><span class="lowerident"> parseQueryParams</span><span class="kw">
-    |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">withDefault</span><span class="delimeter"> (</span><span class="upperident">Dict</span><span class="delimeter">.</span><span class="lowerident">empty</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="delimeter">)</span><span class="comment">
+    |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">withDefault</span><span class="delimeter"> (</span><span class="upperident">Dict</span><span class="delimeter">.</span><span class="lowerident">empty</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="delimeter">)</span><span class="lowerident">
 
-# First check for the updateItemsPerPage form value,</span><span class="comment">
-# if not present then check for the items URL parameter,</span><span class="comment">
-# if not provided default to 25</span><span class="lowerident">
 items</span><span class="kw"> =</span><span class="lowerident">
     queryParams</span><span class="kw">
     |&gt;</span><span class="upperident"> Dict</span><span class="delimeter">.</span><span class="lowerident">get</span><span class="literal"> "updateItemsPerPage"</span><span class="kw">
@@ -87,23 +91,19 @@ items</span><span class="kw"> =</span><span class="lowerident">
         queryParams</span><span class="kw">
         |&gt;</span><span class="upperident"> Dict</span><span class="delimeter">.</span><span class="lowerident">get</span><span class="literal"> "items"</span><span class="kw">
         |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">try</span><span class="upperident"> Str</span><span class="delimeter">.</span><span class="lowerident">toI64</span><span class="kw">
-    |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">withDefault</span><span class="literal"> 25</span><span class="comment">
+    |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">withDefault</span><span class="literal"> 25</span><span class="lowerident">
 
-# parse the page number from the URL, default to 1</span><span class="lowerident">
 page</span><span class="kw"> =</span><span class="lowerident">
     queryParams</span><span class="kw">
     |&gt;</span><span class="upperident"> Dict</span><span class="delimeter">.</span><span class="lowerident">get</span><span class="literal"> "page"</span><span class="kw">
     |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">try</span><span class="upperident"> Str</span><span class="delimeter">.</span><span class="lowerident">toI64</span><span class="kw">
-    |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">withDefault</span><span class="literal"> 1</span><span class="comment">
+    |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">withDefault</span><span class="literal"> 1</span><span class="lowerident">
 
-# parse the sortBy parameter from the URL, default to "ID"</span><span class="lowerident">
 sortBy</span><span class="kw"> =</span><span class="lowerident">
     queryParams</span><span class="kw">
     |&gt;</span><span class="upperident"> Dict</span><span class="delimeter">.</span><span class="lowerident">get</span><span class="literal"> "sortBy"</span><span class="kw">
-    |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">withDefault</span><span class="literal"> "ID"</span><span class="comment">
+    |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">withDefault</span><span class="literal"> "ID"</span><span class="lowerident">
 
-# parse the sortDirection parameter from the URL, default to ASCENDING</span><span class="comment">
-# we parse either UPPER or lower case variations</span><span class="lowerident">
 sortDirection</span><span class="kw"> =</span><span class="kw">
     when</span><span class="upperident"> Dict</span><span class="delimeter">.</span><span class="lowerident">get</span><span class="lowerident"> queryParams</span><span class="literal"> "sortDirection"</span><span class="kw"> is</span><span class="upperident">
         Ok</span><span class="literal"> "asc"</span><span class="kw"> -&gt;</span><span class="upperident"> ASCENDING</span><span class="upperident">
@@ -112,27 +112,23 @@ sortDirection</span><span class="kw"> =</span><span class="kw">
         Ok</span><span class="literal"> "DESC"</span><span class="kw"> -&gt;</span><span class="upperident"> DESCENDING</span><span class="lowerident">
         _</span><span class="kw"> -&gt;</span><span class="upperident"> ASCENDING</span></samp></pre>
 <p>Then we query the SQLite3 database.</p>
-<pre><samp><span class="comment"># query the database, for a page of data filtered and sorted</span><span class="lowerident">
-tasks</span><span class="kw"> =</span><span class="upperident"> Sql</span><span class="delimeter">.</span><span class="upperident">BigTask</span><span class="delimeter">.</span><span class="lowerident">list</span><span class="op">!</span><span class="delimeter"> {</span><span class="lowerident">
+<pre><samp><span class="lowerident">tasks</span><span class="kw"> =</span><span class="upperident"> Sql</span><span class="delimeter">.</span><span class="upperident">BigTask</span><span class="delimeter">.</span><span class="lowerident">list</span><span class="op">!</span><span class="delimeter"> {</span><span class="lowerident">
     dbPath</span><span class="delimeter">,</span><span class="lowerident">
     page</span><span class="delimeter">,</span><span class="lowerident">
     items</span><span class="delimeter">,</span><span class="lowerident">
     sortBy</span><span class="delimeter">,</span><span class="lowerident">
     sortDirection</span><span class="delimeter">,</span><span class="delimeter">
-}</span><span class="comment">
+}</span><span class="lowerident">
 
-# query the database for the total number of tasks</span><span class="lowerident">
 total</span><span class="kw"> =</span><span class="upperident"> Sql</span><span class="delimeter">.</span><span class="upperident">BigTask</span><span class="delimeter">.</span><span class="lowerident">total</span><span class="op">!</span><span class="delimeter"> {</span><span class="lowerident"> dbPath</span><span class="delimeter"> }</span></samp></pre>
-<p>Finally we render a HTML table and add a response header to push a new URL.</p>
+<p>Finally, we render a HTML table and add a response header to push a new URL. The URL will include the current page, items per page, sort by, and sort direction that was parsed earlier.</p>
 <pre><samp><span class="lowerident">sortDirectionStr</span><span class="kw"> =</span><span class="kw">
     when</span><span class="lowerident"> sortDirection</span><span class="kw"> is</span><span class="upperident">
         ASCENDING</span><span class="kw"> -&gt;</span><span class="literal"> "asc"</span><span class="upperident">
-        DESCENDING</span><span class="kw"> -&gt;</span><span class="literal"> "desc"</span><span class="comment">
+        DESCENDING</span><span class="kw"> -&gt;</span><span class="literal"> "desc"</span><span class="lowerident">
 
-# update the URL with the current page, items per page, sort by, and sort direction that was parsed from earlier</span><span class="lowerident">
-updateURL</span><span class="kw"> =</span><span class="literal"> "/bigTask?page=$(Num.toStr page)&amp;items=$(Num.toStr items)&amp;sortBy=$(sortBy)&amp;sortDirection=$(sortDirectionStr)"</span><span class="comment">
+updateURL</span><span class="kw"> =</span><span class="literal"> "/bigTask?page=$(Num.toStr page)&amp;items=$(Num.toStr items)&amp;sortBy=$(sortBy)&amp;sortDirection=$(sortDirectionStr)"</span><span class="upperident">
 
-# render the HTML table</span><span class="upperident">
 Views</span><span class="delimeter">.</span><span class="upperident">BigTask</span><span class="delimeter">.</span><span class="lowerident">page</span><span class="delimeter"> {</span><span class="lowerident">
     session</span><span class="delimeter">,</span><span class="lowerident">
     tasks</span><span class="delimeter">,</span><span class="lowerident">
@@ -146,13 +142,12 @@ Views</span><span class="delimeter">.</span><span class="upperident">BigTask</sp
     }</span><span class="delimeter">,</span><span class="delimeter">
 }</span><span class="kw">
 |&gt;</span><span class="lowerident"> respondHtml</span><span class="delimeter"> [</span><span class="delimeter">{</span><span class="lowerident">name</span><span class="kw"> :</span><span class="literal"> "HX-Push-Url"</span><span class="delimeter">,</span><span class="lowerident"> value</span><span class="kw"> :</span><span class="upperident"> Str</span><span class="delimeter">.</span><span class="lowerident">toUtf8</span><span class="lowerident"> updateURL</span><span class="delimeter">}</span><span class="delimeter">]</span></samp></pre>
-<h1 id="render-page"><a href="#render-page">Views.BigTask.page</a></h1>
+<h2 id="render-page"><a href="#render-page">Views.BigTask.page</a></h2>
 <p>This is what it looks like when rendered:</p>
 <img class="demo-img" src="/roc-htmx-demo-3/table-1.png" alt="screen capture of the rendered data table"/>
 <pre><samp><span class="comment"># src/Views/BigTask.roc</span><span class="lowerident">
-page</span><span class="kw"> =</span><span class="kw"> \</span><span class="delimeter">{</span><span class="lowerident"> session</span><span class="delimeter">,</span><span class="lowerident"> tasks</span><span class="delimeter">,</span><span class="lowerident"> pagination</span><span class="delimeter">,</span><span class="lowerident"> sortBy</span><span class="delimeter">,</span><span class="lowerident"> sortDirection</span><span class="delimeter"> }</span><span class="kw"> -&gt;</span><span class="comment">
 
-    # we use a common layout helper for all pages e.g. navigation bar</span><span class="upperident">
+page</span><span class="kw"> =</span><span class="kw"> \</span><span class="delimeter">{</span><span class="lowerident"> session</span><span class="delimeter">,</span><span class="lowerident"> tasks</span><span class="delimeter">,</span><span class="lowerident"> pagination</span><span class="delimeter">,</span><span class="lowerident"> sortBy</span><span class="delimeter">,</span><span class="lowerident"> sortDirection</span><span class="delimeter"> }</span><span class="kw"> -&gt;</span><span class="upperident">
     Views</span><span class="delimeter">.</span><span class="upperident">Layout</span><span class="delimeter">.</span><span class="lowerident">layout</span><span class="delimeter">
         {</span><span class="lowerident">
             user</span><span class="kw">:</span><span class="lowerident"> session</span><span class="delimeter">.</span><span class="lowerident">user</span><span class="delimeter">,</span><span class="lowerident">
@@ -167,11 +162,7 @@ page</span><span class="kw"> =</span><span class="kw"> \</span><span class="deli
                     Html</span><span class="delimeter">.</span><span class="lowerident">p</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">text</span><span class="literal"> "This table is big and has many tasks, each task is a big task..."</span><span class="delimeter">]</span><span class="delimeter">,</span><span class="delimeter">
                 ]</span><span class="delimeter">,</span><span class="lowerident">
                 div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "row"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">
-                    div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "inline-block m-2"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="comment">
-
-                        # a button to download the data as a CSV</span><span class="comment">
-                        # note we need to use a link with hx-disable to prevent</span><span class="comment">
-                        # htmx from intercepting the response and preventing the browser from downloading the file</span><span class="lowerident">
+                    div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "inline-block m-2"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="lowerident">
                         a</span><span class="delimeter"> [</span><span class="lowerident">
                             type</span><span class="literal"> "button"</span><span class="delimeter">,</span><span class="lowerident">
                             class</span><span class="literal"> "btn btn-success"</span><span class="delimeter">,</span><span class="lowerident">
@@ -186,12 +177,12 @@ page</span><span class="kw"> =</span><span class="kw"> \</span><span class="deli
                 ]</span><span class="delimeter">,</span><span class="lowerident">
                 div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "row"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="comment">
 
-                    # render the data table from a description of the columns and the tasks data rows</span><span class="upperident">
+                    # render the data table from a description of the columns and the tasks</span><span class="upperident">
                     Views</span><span class="delimeter">.</span><span class="upperident">Bootstrap</span><span class="delimeter">.</span><span class="lowerident">renderDataTable</span><span class="delimeter"> (</span><span class="lowerident">columns</span><span class="delimeter"> {</span><span class="lowerident"> sortBy</span><span class="delimeter">,</span><span class="lowerident"> sortDirection</span><span class="delimeter"> }</span><span class="delimeter">)</span><span class="lowerident"> tasks</span><span class="delimeter">
                 ]</span><span class="delimeter">,</span><span class="lowerident">
                 div</span><span class="delimeter"> [</span><span class="lowerident">class</span><span class="literal"> "row"</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="comment">
 
-                    # render a pagination view with buttons to navigate the table</span><span class="lowerident">
+                    # render pagination buttons to navigate the table</span><span class="lowerident">
                     paginationView</span><span class="delimeter"> {</span><span class="lowerident">
                         page</span><span class="kw">:</span><span class="lowerident"> pagination</span><span class="delimeter">.</span><span class="lowerident">page</span><span class="delimeter">,</span><span class="lowerident">
                         items</span><span class="kw">:</span><span class="lowerident"> pagination</span><span class="delimeter">.</span><span class="lowerident">items</span><span class="delimeter">,</span><span class="lowerident">
@@ -203,16 +194,26 @@ page</span><span class="kw"> =</span><span class="kw"> \</span><span class="deli
                 ]</span><span class="delimeter">,</span><span class="delimeter">
             ]</span><span class="delimeter">,</span><span class="delimeter">
         ]</span></samp></pre>
-<h1 id="data-table-input"><a href="#data-table-input">Data Table Inputs</a></h1>
-<p>How each cell in the data table is rendered is determined by a description of the column. For our table we created a helper and provide the <code>sortBy</code> and <code>sortDirection</code> values to vary the description for our sorted column.</p>
+<p>The following is our download button. We use a link with <code>hx-disable</code> to prevent htmx from intercepting the response which would stop the browser from downloading the file.</p>
+<pre><samp><span class="lowerident">a</span><span class="delimeter"> [</span><span class="lowerident">
+    type</span><span class="literal"> "button"</span><span class="delimeter">,</span><span class="lowerident">
+    class</span><span class="literal"> "btn btn-success"</span><span class="delimeter">,</span><span class="lowerident">
+    href</span><span class="literal"> "/bigTask/downloadCsv"</span><span class="delimeter">,</span><span class="delimeter">
+    (</span><span class="lowerident">attribute</span><span class="literal"> "download"</span><span class="delimeter">)</span><span class="literal"> ""</span><span class="delimeter">,</span><span class="delimeter">
+    (</span><span class="lowerident">attribute</span><span class="literal"> "hx-disable"</span><span class="delimeter">)</span><span class="literal"> ""</span><span class="delimeter">,</span><span class="delimeter">
+    (</span><span class="lowerident">attribute</span><span class="literal"> "aria-label"</span><span class="delimeter">)</span><span class="literal"> "Download Button"</span><span class="delimeter">,</span><span class="delimeter">
+]</span><span class="delimeter"> [</span><span class="lowerident">
+    text</span><span class="literal"> "Download CSV"</span><span class="delimeter">,</span><span class="delimeter">
+]</span><span class="delimeter">,</span></samp></pre>
+<h2 id="data-table-input"><a href="#data-table-input">Data Table Inputs</a></h2>
+<p>How each cell in the data table is rendered is determined by a description of the column. For our table, we created a helper and provided the <code>sortBy</code> and <code>sortDirection</code> values to vary the description for our sorted column.</p>
 <pre><samp><span class="lowerident">columns</span><span class="kw"> :</span><span class="delimeter">
     {</span><span class="lowerident">
         sortBy</span><span class="kw"> :</span><span class="upperident"> Str</span><span class="delimeter">,</span><span class="lowerident">
         sortDirection</span><span class="kw"> :</span><span class="delimeter"> [</span><span class="upperident">ASCENDING</span><span class="delimeter">,</span><span class="upperident"> DESCENDING</span><span class="delimeter">]</span><span class="delimeter">,</span><span class="delimeter">
     }</span><span class="kw">
     -&gt;</span><span class="upperident"> List</span><span class="delimeter"> (</span><span class="upperident">DataTableColumn</span><span class="upperident"> BigTask</span><span class="delimeter">)</span></samp></pre>
-<p>For example the first column <code>"Reference ID"</code> is the most simple, it simply displays the <code>referenceId</code> field of the task, and does not display a sorting icon, and it's width is not specified.</p>
-<p>The <code>renderValueFn</code> takes a row of data (a single BigTask in this case) and returns a <code>Html.Node</code> that will be rendered in the table cell. Because we have provided the type annotation <code>List (DataTableColumn BigTask)</code> the compiler can verify that we are correctly using the <code>task</code> and provided helpful error messages.</p>
+<p>For example the first column <code>"Reference ID"</code> is the most simple, it displays the <code>referenceId</code> field of the task, does not display a sorting icon, and its width is not specified.</p>
 <pre><samp><span class="delimeter">{</span><span class="lowerident">
     label</span><span class="kw">:</span><span class="literal"> "Reference ID"</span><span class="delimeter">,</span><span class="lowerident">
     name</span><span class="kw">:</span><span class="literal"> "ReferenceID"</span><span class="delimeter">,</span><span class="lowerident">
@@ -220,13 +221,17 @@ page</span><span class="kw"> =</span><span class="kw"> \</span><span class="deli
     renderValueFn</span><span class="kw">:</span><span class="kw"> \</span><span class="lowerident">task</span><span class="kw"> -&gt;</span><span class="upperident"> Html</span><span class="delimeter">.</span><span class="lowerident">text</span><span class="lowerident"> task</span><span class="delimeter">.</span><span class="lowerident">referenceId</span><span class="delimeter">,</span><span class="lowerident">
     width</span><span class="kw">:</span><span class="upperident"> None</span><span class="delimeter">,</span><span class="delimeter">
 }</span></samp></pre>
+<p>The <code>renderValueFn</code> takes a row of data (a BigTask) and returns a <code>Html.Node</code> to display as a single cell in the table. Because we have provided the type annotation <code>List (DataTableColumn BigTask)</code> the compiler can verify that we are correctly using the <code>task</code> and provide helpful error messages.</p>
 <p>The second column <code>"Customer ID"</code> is more complex, it displays a <code>DataTableForm</code> input element to modify the <code>customerReferenceId</code> field of the task. It also displays a sorting icon button to toggle sorting the table by this column.</p>
 <pre><samp><span class="delimeter">{</span><span class="lowerident">
     label</span><span class="kw">:</span><span class="literal"> "Customer ID"</span><span class="delimeter">,</span><span class="lowerident">
     name</span><span class="kw">:</span><span class="literal"> "CustomerReferenceID"</span><span class="delimeter">,</span><span class="lowerident">
     sorted</span><span class="kw">:</span><span class="lowerident"> sortedArg</span><span class="literal"> "CustomerReferenceID"</span><span class="delimeter">,</span><span class="lowerident">
+    width</span><span class="kw">:</span><span class="upperident"> None</span><span class="delimeter">,</span><span class="lowerident">
     renderValueFn</span><span class="kw">:</span><span class="kw"> \</span><span class="lowerident">task</span><span class="kw"> -&gt;</span><span class="lowerident">
+
         idStr</span><span class="kw"> =</span><span class="upperident"> Num</span><span class="delimeter">.</span><span class="lowerident">toStr</span><span class="lowerident"> task</span><span class="delimeter">.</span><span class="lowerident">id</span><span class="delimeter">
+
         {</span><span class="lowerident">
             updateUrl</span><span class="kw">:</span><span class="literal"> "/bigTask/customerId/$(idStr)"</span><span class="delimeter">,</span><span class="lowerident">
             inputs</span><span class="kw">:</span><span class="delimeter"> [</span><span class="delimeter">
@@ -239,13 +244,165 @@ page</span><span class="kw"> =</span><span class="kw"> \</span><span class="deli
             ]</span><span class="delimeter">,</span><span class="delimeter">
         }</span><span class="kw">
         |&gt;</span><span class="upperident"> Views</span><span class="delimeter">.</span><span class="upperident">Bootstrap</span><span class="delimeter">.</span><span class="lowerident">newDataTableForm</span><span class="kw">
-        |&gt;</span><span class="upperident"> Views</span><span class="delimeter">.</span><span class="upperident">Bootstrap</span><span class="delimeter">.</span><span class="lowerident">renderDataTableForm</span><span class="delimeter">,</span><span class="lowerident">
-    width</span><span class="kw">:</span><span class="upperident"> None</span><span class="delimeter">,</span><span class="delimeter">
+        |&gt;</span><span class="upperident"> Views</span><span class="delimeter">.</span><span class="upperident">Bootstrap</span><span class="delimeter">.</span><span class="lowerident">renderDataTableForm</span><span class="delimeter">,</span><span class="delimeter">
 }</span></samp></pre>
-<h1 id="render-data-table"><a href="#render-data-table">Views.Bootstrap.renderDataTable</a></h1>
-<h1 id="validation"><a href="#validation">Input Validaiton</a></h1>
+<h2 id="render-data-table"><a href="#render-data-table">Views.Bootstrap.renderDataTable</a></h2>
+<p>The <code>DataTableForm</code> type is used to render a form with inputs such as text box, date picker, or dropdown selection.</p>
+<pre><samp><span class="comment"># src/Views/Bootstrap.roc</span><span class="upperident">
+
+DataTableInputValidation</span><span class="kw"> :</span><span class="delimeter"> [</span><span class="upperident">None</span><span class="delimeter">,</span><span class="upperident"> Valid</span><span class="delimeter">,</span><span class="upperident"> Invalid</span><span class="upperident"> Str</span><span class="delimeter">]</span><span class="upperident">
+DataTableForm</span><span class="kw"> :=</span><span class="delimeter"> {</span><span class="lowerident">
+    updateUrl</span><span class="kw"> :</span><span class="upperident"> Str</span><span class="delimeter">,</span><span class="lowerident">
+    inputs</span><span class="kw"> :</span><span class="upperident"> List</span><span class="delimeter"> {</span><span class="lowerident">
+        name</span><span class="kw"> :</span><span class="upperident"> Str</span><span class="delimeter">,</span><span class="comment"> # the key in form data</span><span class="lowerident">
+        id</span><span class="kw"> :</span><span class="upperident"> Str</span><span class="delimeter">,</span><span class="comment"> # uniquely identifier, maintain focus between renders</span><span class="lowerident">
+        value</span><span class="kw"> :</span><span class="delimeter"> [</span><span class="upperident">Text</span><span class="upperident"> Str</span><span class="delimeter">,</span><span class="upperident"> Date</span><span class="upperident"> Str</span><span class="delimeter">,</span><span class="upperident"> Choice</span><span class="delimeter"> {</span><span class="lowerident">selected</span><span class="kw">:</span><span class="upperident"> U64</span><span class="delimeter">,</span><span class="lowerident"> options</span><span class="kw">:</span><span class="upperident"> List</span><span class="upperident"> Str</span><span class="delimeter">}</span><span class="delimeter">]</span><span class="delimeter">,</span><span class="lowerident">
+        validation</span><span class="kw"> :</span><span class="upperident"> DataTableInputValidation</span><span class="delimeter">,</span><span class="delimeter">
+    }</span><span class="delimeter">,</span><span class="delimeter">
+}</span></samp></pre><pre><samp><span class="lowerident">newDataTableForm</span><span class="kw"> =</span><span class="upperident"> @</span><span class="upperident">DataTableForm</span><span class="lowerident">
+
+renderDataTableForm</span><span class="kw"> :</span><span class="upperident"> DataTableForm</span><span class="kw"> -&gt;</span><span class="upperident"> Html</span><span class="delimeter">.</span><span class="upperident">Node</span><span class="lowerident">
+renderDataTableForm</span><span class="kw"> =</span><span class="kw"> \</span><span class="upperident">@</span><span class="upperident">DataTableForm</span><span class="delimeter"> {</span><span class="lowerident">updateUrl</span><span class="delimeter">,</span><span class="lowerident"> inputs</span><span class="delimeter">}</span><span class="kw"> -&gt;</span><span class="lowerident">
+
+    renderFormSection</span><span class="kw"> =</span><span class="kw"> \</span><span class="delimeter">{</span><span class="lowerident">name</span><span class="delimeter">,</span><span class="lowerident">id</span><span class="delimeter">,</span><span class="lowerident">value</span><span class="delimeter">,</span><span class="lowerident">validation</span><span class="delimeter">}</span><span class="kw"> -&gt;</span><span class="kw">
+        when</span><span class="lowerident"> value</span><span class="kw"> is</span><span class="upperident">
+            Text</span><span class="lowerident"> str</span><span class="kw"> -&gt;</span><span class="lowerident"> renderTextSection</span><span class="delimeter"> {</span><span class="lowerident">name</span><span class="delimeter">,</span><span class="lowerident">id</span><span class="delimeter">,</span><span class="lowerident">str</span><span class="delimeter">,</span><span class="lowerident">validation</span><span class="delimeter">}</span><span class="upperident">
+            Date</span><span class="lowerident"> str</span><span class="kw"> -&gt;</span><span class="lowerident"> renderDateSection</span><span class="delimeter"> {</span><span class="lowerident">name</span><span class="delimeter">,</span><span class="lowerident">id</span><span class="delimeter">,</span><span class="lowerident">str</span><span class="delimeter">,</span><span class="lowerident">validation</span><span class="delimeter">}</span><span class="upperident">
+            Choice</span><span class="delimeter"> {</span><span class="lowerident">selected</span><span class="delimeter">,</span><span class="lowerident"> options</span><span class="delimeter">}</span><span class="kw"> -&gt;</span><span class="lowerident"> renderChoiceSection</span><span class="delimeter"> {</span><span class="lowerident">name</span><span class="delimeter">,</span><span class="lowerident">id</span><span class="delimeter">,</span><span class="lowerident">selected</span><span class="delimeter">,</span><span class="lowerident">options</span><span class="delimeter">,</span><span class="lowerident">validation</span><span class="delimeter">}</span><span class="upperident">
+
+    Html</span><span class="delimeter">.</span><span class="lowerident">form</span><span class="delimeter"> [</span><span class="delimeter">
+        (</span><span class="lowerident">attribute</span><span class="literal"> "hx-put"</span><span class="delimeter">)</span><span class="lowerident"> updateUrl</span><span class="delimeter">,</span><span class="delimeter">
+        (</span><span class="lowerident">attribute</span><span class="literal"> "hx-trigger"</span><span class="delimeter">)</span><span class="literal"> "input delay:250ms"</span><span class="delimeter">,</span><span class="delimeter">
+        (</span><span class="lowerident">attribute</span><span class="literal"> "hx-swap"</span><span class="delimeter">)</span><span class="literal"> "outerHTML"</span><span class="delimeter">,</span><span class="delimeter">
+    ]</span><span class="delimeter"> (</span><span class="lowerident">
+        inputs</span><span class="kw">
+        |&gt;</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="lowerident"> renderFormSection</span><span class="kw">
+        |&gt;</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">join</span><span class="delimeter">
+    )</span><span class="lowerident">
+
+renderTextSection</span><span class="kw"> =</span><span class="kw"> \</span><span class="delimeter">{</span><span class="lowerident">name</span><span class="delimeter">,</span><span class="lowerident">id</span><span class="delimeter">,</span><span class="lowerident">str</span><span class="delimeter">,</span><span class="lowerident">validation</span><span class="delimeter">}</span><span class="kw"> -&gt;</span><span class="delimeter">
+    [</span><span class="upperident">
+        Html</span><span class="delimeter">.</span><span class="lowerident">label</span><span class="delimeter"> [</span><span class="upperident">Attribute</span><span class="delimeter">.</span><span class="lowerident">for</span><span class="lowerident"> id</span><span class="delimeter">,</span><span class="upperident"> Attribute</span><span class="delimeter">.</span><span class="lowerident">hidden</span><span class="literal"> ""</span><span class="delimeter">]</span><span class="delimeter"> [</span><span class="upperident">Html</span><span class="delimeter">.</span><span class="lowerident">text</span><span class="lowerident"> name</span><span class="delimeter">]</span><span class="delimeter">,</span><span class="delimeter">
+        (</span><span class="upperident">Html</span><span class="delimeter">.</span><span class="lowerident">element</span><span class="literal"> "input"</span><span class="delimeter">)</span><span class="delimeter"> [</span><span class="upperident">
+            Attribute</span><span class="delimeter">.</span><span class="lowerident">type</span><span class="literal"> "text"</span><span class="delimeter">,</span><span class="lowerident">
+            class</span><span class="literal"> "form-control $(validationClass validation)"</span><span class="delimeter">,</span><span class="upperident">
+            Attribute</span><span class="delimeter">.</span><span class="lowerident">id</span><span class="lowerident"> id</span><span class="delimeter">,</span><span class="upperident">
+            Attribute</span><span class="delimeter">.</span><span class="lowerident">name</span><span class="lowerident"> name</span><span class="delimeter">,</span><span class="upperident">
+            Attribute</span><span class="delimeter">.</span><span class="lowerident">value</span><span class="lowerident"> str</span><span class="delimeter">,</span><span class="delimeter">
+        ]</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter">,</span><span class="lowerident">
+        validationMsg</span><span class="lowerident"> validation</span><span class="delimeter">
+    ]</span></samp></pre>
+<h2 id="put-update-data"><a href="#put-update-data">PUT '/customerID/<id>'—Update CustomerReferenceID</a></h2>
+<p>The following shows how we handle an update to the <code>CustomerReferenceID</code> for a given task. We decode the request body and parse the expected fields.</p>
+<pre><samp><span class="comment"># src/Controllers/BigTask.roc</span><span class="delimeter">
+
+(</span><span class="upperident">Put</span><span class="delimeter">,</span><span class="delimeter"> [</span><span class="literal">"customerId"</span><span class="delimeter">,</span><span class="lowerident"> idStr</span><span class="delimeter">]</span><span class="delimeter">)</span><span class="kw"> -&gt;</span><span class="lowerident">
+
+    values</span><span class="kw"> =</span><span class="lowerident"> decodeFormValues</span><span class="op">!</span><span class="lowerident"> req</span><span class="delimeter">.</span><span class="lowerident">body</span><span class="lowerident">
+
+    id</span><span class="kw"> =</span><span class="lowerident"> decodeBigTaskId</span><span class="op">!</span><span class="lowerident"> idStr</span><span class="comment"> # either return a I64 or short circuit with a BadRequest</span><span class="lowerident">
+
+    validation</span><span class="kw"> =</span><span class="upperident">
+        Dict</span><span class="delimeter">.</span><span class="lowerident">get</span><span class="lowerident"> values</span><span class="literal"> "CustomerReferenceID"</span><span class="kw">
+        |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">mapErr</span><span class="kw"> \</span><span class="lowerident">_</span><span class="kw"> -&gt;</span><span class="upperident"> BadRequest</span><span class="delimeter"> (</span><span class="upperident">MissingField</span><span class="literal"> "CustomerReferenceID"</span><span class="delimeter">)</span><span class="kw">
+        |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">try</span><span class="kw"> \</span><span class="lowerident">cridstr</span><span class="kw"> -&gt;</span><span class="kw">
+            when</span><span class="upperident"> Str</span><span class="delimeter">.</span><span class="lowerident">toI64</span><span class="lowerident"> cridstr</span><span class="kw"> is</span><span class="upperident">
+                Ok</span><span class="lowerident"> i64</span><span class="kw"> if</span><span class="lowerident"> i64</span><span class="op"> &gt;</span><span class="literal"> 0</span><span class="op"> &amp;&amp;</span><span class="lowerident"> i64</span><span class="op"> &lt;</span><span class="literal"> 100000</span><span class="kw"> -&gt;</span><span class="upperident"> Ok</span><span class="upperident"> Valid</span><span class="lowerident">
+                _</span><span class="kw"> -&gt;</span><span class="upperident"> Ok</span><span class="delimeter"> (</span><span class="upperident">Invalid</span><span class="literal"> "must be a number between 0 and 100,000"</span><span class="delimeter">)</span><span class="kw">
+        |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">fromResult</span><span class="op">!</span><span class="lowerident">
+
+    updateBigTaskOnlyIfValid</span><span class="op">!</span><span class="lowerident"> validation</span><span class="delimeter"> {</span><span class="lowerident">dbPath</span><span class="delimeter">,</span><span class="lowerident"> id</span><span class="delimeter">,</span><span class="lowerident"> values</span><span class="delimeter">}</span><span class="delimeter">
+
+    {</span><span class="lowerident">
+        updateUrl</span><span class="kw"> :</span><span class="literal"> "/bigTask/customerId/$(idStr)"</span><span class="delimeter">,</span><span class="lowerident">
+        inputs</span><span class="kw"> :</span><span class="delimeter"> [</span><span class="delimeter">{</span><span class="lowerident">
+            name</span><span class="kw"> :</span><span class="literal"> "CustomerReferenceID"</span><span class="delimeter">,</span><span class="lowerident">
+            id</span><span class="kw"> :</span><span class="literal"> "customer-id-$(idStr)"</span><span class="delimeter">,</span><span class="lowerident">
+            value</span><span class="kw"> :</span><span class="upperident"> Text</span><span class="delimeter"> (</span><span class="upperident">Dict</span><span class="delimeter">.</span><span class="lowerident">get</span><span class="lowerident"> values</span><span class="literal"> "CustomerReferenceID"</span><span class="kw"> |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">withDefault</span><span class="literal"> ""</span><span class="delimeter">)</span><span class="delimeter">,</span><span class="lowerident">
+            validation</span><span class="delimeter">,</span><span class="delimeter">
+        }</span><span class="delimeter">]</span><span class="delimeter">,</span><span class="delimeter">
+    }</span><span class="kw">
+    |&gt;</span><span class="upperident"> Views</span><span class="delimeter">.</span><span class="upperident">Bootstrap</span><span class="delimeter">.</span><span class="lowerident">newDataTableForm</span><span class="kw">
+    |&gt;</span><span class="upperident"> Views</span><span class="delimeter">.</span><span class="upperident">Bootstrap</span><span class="delimeter">.</span><span class="lowerident">renderDataTableForm</span><span class="kw">
+    |&gt;</span><span class="lowerident"> respondHtml</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="lowerident">
+
+decodeBigTaskId</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">idStr</span><span class="kw"> -&gt;</span><span class="upperident">
+    Str</span><span class="delimeter">.</span><span class="lowerident">toI64</span><span class="lowerident"> idStr</span><span class="kw">
+    |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">mapErr</span><span class="kw"> \</span><span class="lowerident">_</span><span class="kw"> -&gt;</span><span class="upperident"> BadRequest</span><span class="delimeter"> (</span><span class="upperident">InvalidBigTaskID</span><span class="lowerident"> idStr</span><span class="literal"> "expected a valid 64-bit integer"</span><span class="delimeter">)</span><span class="kw">
+    |&gt;</span><span class="upperident"> Task</span><span class="delimeter">.</span><span class="lowerident">fromResult</span></samp></pre>
+<h2 id="validation"><a href="#validation">Form Input Validaiton</a></h2>
+<p>The response from our <code>PUT</code> request will include the validation state of the input. This is a useful visual indicator to the user that their input is either Valid (displayed in green) and has been successfully saved, or it is Invalid (displayed in red with a message) and has not been saved to the database.</p>
 <div class="container">
   <img class="demo-img" src="/roc-htmx-demo-3/table-3.png" alt="screen capture of a valid form"/>
   <img class="demo-img" src="/roc-htmx-demo-3/table-2.png" alt="screen capture of an invalid form"/>
 </div>
+<h2 id="download-csv"><a href="#download-csv">Download CSV Data</a></h2>
+<p>The following code example shows the endpoint we use to download the data as a CSV file.</p>
+<p>When the server receives <code>GET</code> request to <code>/bigTask/downloadCsv</code>, it responds with our data in the response body; the content type, disposition, and length headers.</p>
+<pre><samp><span class="delimeter">(</span><span class="upperident">Get</span><span class="delimeter">,</span><span class="delimeter"> [</span><span class="literal">"downloadCsv"</span><span class="delimeter">]</span><span class="delimeter">)</span><span class="kw"> -&gt;</span><span class="lowerident">
+
+    data</span><span class="kw"> =</span><span class="literal">
+        """
+        ID, CustomerReferenceID, DateCreated, Status
+        1, 12345, 2021-01-01, Raised
+        2, 67890, 2021-01-02, Completed
+        3, 54321, 2021-01-03, Deferred
+        """</span><span class="kw">
+        |&gt;</span><span class="upperident"> Str</span><span class="delimeter">.</span><span class="lowerident">toUtf8</span><span class="upperident">
+
+    Task</span><span class="delimeter">.</span><span class="lowerident">ok</span><span class="delimeter"> {</span><span class="lowerident">
+        status</span><span class="kw">:</span><span class="literal"> 200</span><span class="delimeter">,</span><span class="lowerident">
+        headers</span><span class="kw">:</span><span class="delimeter"> [</span><span class="delimeter">
+            {</span><span class="lowerident"> name</span><span class="kw">:</span><span class="literal"> "Content-Type"</span><span class="delimeter">,</span><span class="lowerident"> value</span><span class="kw">:</span><span class="upperident"> Str</span><span class="delimeter">.</span><span class="lowerident">toUtf8</span><span class="literal"> "text/plain"</span><span class="delimeter"> }</span><span class="delimeter">,</span><span class="delimeter">
+            {</span><span class="lowerident"> name</span><span class="kw">:</span><span class="literal"> "Content-Disposition"</span><span class="delimeter">,</span><span class="lowerident"> value</span><span class="kw">:</span><span class="upperident"> Str</span><span class="delimeter">.</span><span class="lowerident">toUtf8</span><span class="literal"> "attachment; filename=table.csv"</span><span class="delimeter"> }</span><span class="delimeter">,</span><span class="delimeter">
+            {</span><span class="lowerident"> name</span><span class="kw">:</span><span class="literal"> "Content-Length"</span><span class="delimeter">,</span><span class="lowerident"> value</span><span class="kw">:</span><span class="upperident"> Str</span><span class="delimeter">.</span><span class="lowerident">toUtf8</span><span class="literal"> "$(List.len data |&gt; Num.toStr)"</span><span class="delimeter"> }</span><span class="delimeter">,</span><span class="delimeter">
+        ]</span><span class="delimeter">,</span><span class="lowerident">
+        body</span><span class="kw">:</span><span class="lowerident"> data</span><span class="delimeter">,</span><span class="delimeter">
+    }</span></samp></pre>
+<p>In this example, we hard-coded the CSV data. A more realistic example might query the database, and use an encoder to convert to the desired format. For example, <code>Encode.toBytes tasks Json.utf8</code> would encode the list of tasks as JSON data.</p>
+<h2 id="client-state"><a href="#client-state">Client-side State Management</a></h2>
+<p>The state of the BigTask table is managed using URL query parameters.</p>
+<p>For example, the following URL encodes the current page number, the number of items per page, and which column and direction to sort by.</p>
+<pre><samp>/bigTask?page=1&items=5&sortBy=ID&sortDirection=asc
+</pre></samp>
+<p>Keeping the state for our table in the URL has some nice advantages.</p>
+<p>First, navigating to the same URL provides the same view.</p>
+<p>Second, any changes can be saved in browser history which means the &quot;Back&quot; and &quot;Forward&quot; buttons navigate through the state and work as expected.</p>
+<p>To achieve this there were a couple of features of htmx and the browser used. Both of these can be seen in the example below.</p>
+<pre><samp><span class="upperident">Html</span><span class="delimeter">.</span><span class="lowerident">form</span><span class="delimeter"> [</span><span class="delimeter">
+    (</span><span class="lowerident">attribute</span><span class="literal"> "hx-get"</span><span class="delimeter">)</span><span class="literal"> ""</span><span class="delimeter">,</span><span class="comment"> # reload the current URL, including the curent parameters</span><span class="delimeter">
+    (</span><span class="lowerident">attribute</span><span class="literal"> "hx-trigger"</span><span class="delimeter">)</span><span class="literal"> "input delay:500ms"</span><span class="delimeter">,</span><span class="delimeter">
+    (</span><span class="lowerident">attribute</span><span class="literal"> "hx-target"</span><span class="delimeter">)</span><span class="literal"> "body"</span><span class="delimeter">,</span><span class="delimeter">
+    (</span><span class="lowerident">attribute</span><span class="literal"> "hx-swap"</span><span class="delimeter">)</span><span class="literal"> "outerHTML"</span><span class="delimeter">,</span><span class="delimeter">
+    (</span><span class="lowerident">attribute</span><span class="literal"> "id"</span><span class="delimeter">)</span><span class="literal"> "formUpdateItemsPerPage"</span><span class="delimeter">,</span><span class="delimeter">
+]</span><span class="delimeter"> [</span><span class="delimeter">
+    (</span><span class="lowerident">element</span><span class="literal"> "input"</span><span class="delimeter">)</span><span class="delimeter"> [</span><span class="upperident">
+        Attribute</span><span class="delimeter">.</span><span class="lowerident">type</span><span class="literal"> "number"</span><span class="delimeter">,</span><span class="upperident">
+        Attribute</span><span class="delimeter">.</span><span class="lowerident">name</span><span class="literal"> "updateItemsPerPage"</span><span class="delimeter">,</span><span class="lowerident">
+        class</span><span class="literal"> "form-control"</span><span class="delimeter">,</span><span class="delimeter">
+        (</span><span class="lowerident">attribute</span><span class="literal"> "id"</span><span class="delimeter">)</span><span class="literal"> "updateItemsPerPage"</span><span class="delimeter">,</span><span class="upperident">
+        Attribute</span><span class="delimeter">.</span><span class="lowerident">value</span><span class="literal"> "$(Num.toStr currItemsPerPage)"</span><span class="delimeter">,</span><span class="upperident">
+        Attribute</span><span class="delimeter">.</span><span class="lowerident">min</span><span class="literal"> "$(Num.toStr minItemsPerPage)"</span><span class="delimeter">,</span><span class="upperident">
+        Attribute</span><span class="delimeter">.</span><span class="lowerident">max</span><span class="literal"> "$(Num.toStr maxItemsPerPage)"</span><span class="delimeter">,</span><span class="lowerident">
+        styles</span><span class="delimeter"> [</span><span class="literal">
+            "border-top-right-radius: 5px;"</span><span class="delimeter">,</span><span class="literal">
+            "border-bottom-right-radius: 5px;"</span><span class="delimeter">,</span><span class="delimeter">
+        ]</span><span class="delimeter">,</span><span class="delimeter">
+    ]</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter">
+]</span><span class="delimeter">,</span></samp></pre>
+<p>The form is submitted using the <code>hx-get</code> attribute with an empty URL <code>""</code>. This is a standard browser behaviour to reference the current document and so htmx will send its query using the current URL and parameters along with the form values.</p>
+<p>The form includes the value <code>updateItemsPerPage</code> which instructs our server to update the number of items per page.</p>
+<p>As we saw earlier, when we query for the table; first we parse this value from the query parameters, and only if it is not present do we use the value of <code>items</code> or a default.</p>
+<pre><samp><span class="lowerident">items</span><span class="kw"> =</span><span class="lowerident">
+    queryParams</span><span class="kw">
+    |&gt;</span><span class="upperident"> Dict</span><span class="delimeter">.</span><span class="lowerident">get</span><span class="literal"> "updateItemsPerPage"</span><span class="kw">
+    |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">try</span><span class="upperident"> Str</span><span class="delimeter">.</span><span class="lowerident">toI64</span><span class="kw">
+    |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">onErr</span><span class="kw"> \</span><span class="lowerident">_</span><span class="kw"> -&gt;</span><span class="lowerident">
+        queryParams</span><span class="kw">
+        |&gt;</span><span class="upperident"> Dict</span><span class="delimeter">.</span><span class="lowerident">get</span><span class="literal"> "items"</span><span class="kw">
+        |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">try</span><span class="upperident"> Str</span><span class="delimeter">.</span><span class="lowerident">toI64</span><span class="kw">
+    |&gt;</span><span class="upperident"> Result</span><span class="delimeter">.</span><span class="lowerident">withDefault</span><span class="literal"> 25</span></samp></pre>
+<h2 id="final-thoughts"><a href="#final-thoughts">Final thoughts</a></h2>
+<p>In this article, I've shared some of the things I learnt while building a data table using htmx and roc. I hope you find it useful and are inspired to try it out for yourself.</p>
+<p>I look forward to future experiments with htmx and roc and hope to share more in the future.</p>
 </main><footer></footer></body></html>
