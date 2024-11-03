@@ -1,0 +1,301 @@
+<!DOCTYPE html><html  lang="en" class="no-js"><head><meta  charset="utf-8"><title></title><meta  name="description" content=""><meta  name="viewport" content="width=device-width"><link  rel="stylesheet" href="/site.css"><script  async="" src="https://www.googletagmanager.com/gtag/js?id=G-WP50D6PVC3"></script><script>window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+
+gtag('config', 'G-WP50D6PVC3');</script></head><body  id="index-page"><main><p><a href="/">Return to Home</a></p>
+<h1>Ball physics simulation</h1>
+<p>This is a simple physics simulation of a number of balls that are attracted to the mouse, and experience gravity.</p>
+<p>It was made using an WIP branch from <a href="https://github.com/lukewilliamboswell/roc-ray">lukewilliamboswell/roc-ray</a> which is a graphics platform for the <a href="https://www.roc-lang.org">roc programming language</a>.</p>
+<p>I wanted to find the simplest thing I could make to test the platform end to end, and also a new package <a href="https://github.com/lukewilliamboswell/roc-pga2d">lukewilliamboswell/roc-pga2d</a> which I put together to learn more about Geometric Algebra and to help with developing the roc-ray platform and more interesting examples.</p>
+<p>(Note: this uses the mouse... sorry mobile users I hadn't thought about you guys when making this 😅)</p>
+<style>
+  #canvas {
+      padding: 10px;
+      margin: 0 auto;
+      border-style: dashed;
+      display: block;
+      width: 800px;
+      height: 600px;
+    }
+</style>
+<p><canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas></p>
+<script>
+    function _date_now() {
+        return Date.now();
+    }
+    function on_load() {
+        const dpr = window.devicePixelRatio;
+        let canvas = document.getElementById("canvas");
+
+        let on_resize = Module.cwrap("on_resize", null, [
+            "number",
+            "number",
+        ]);
+
+        canvas.addEventListener('click', function(e) {
+          canvas.focus();
+        });
+
+        canvas.addEventListener('keydown', function(e) {
+            if([" ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].indexOf(e.key) > -1) {
+                e.preventDefault();
+            }
+        });
+
+        canvas.tabIndex = 1;
+
+        let resize_handler = () => {
+            on_resize(800, 600);
+        };
+
+        window.addEventListener("resize", resize_handler, true);
+
+        resize_handler();
+    }
+
+    var Module = {
+        postRun: [on_load],
+        canvas: document.getElementById("canvas"),
+    };
+</script>
+<script src="/roc-ray-ball-physics/rocray.js"></script>
+<pre><samp><span class="lowerident">app</span><span class="delimeter"> [</span><span class="upperident">Model</span><span class="delimeter">,</span><span class="lowerident"> init</span><span class="op">!</span><span class="delimeter">,</span><span class="lowerident"> render</span><span class="op">!</span><span class="delimeter">]</span><span class="delimeter"> {</span><span class="lowerident">
+    rr</span><span class="kw">:</span><span class="lowerident"> platform</span><span class="literal"> "../platform/main.roc"</span><span class="delimeter">,</span><span class="lowerident">
+    rand</span><span class="kw">:</span><span class="literal"> "https://github.com/lukewilliamboswell/roc-random/releases/download/0.3.0/hPlOciYUhWMU7BefqNzL89g84-30fTE6l2_6Y3cxIcE.tar.br"</span><span class="delimeter">,</span><span class="lowerident">
+    pga</span><span class="kw">:</span><span class="literal"> "https://github.com/lukewilliamboswell/roc-pga2d/releases/download/0.3.0/pdeyRVVsip_FFlHVK_ybcSzKxZLspU_KyMBicijEL-c.tar.br"</span><span class="delimeter">,</span><span class="delimeter">
+}</span><span class="lowerident">
+
+import</span><span class="lowerident"> rr</span><span class="delimeter">.</span><span class="upperident">RocRay</span><span class="lowerident">
+import</span><span class="lowerident"> rr</span><span class="delimeter">.</span><span class="upperident">Draw</span><span class="lowerident">
+import</span><span class="lowerident"> rr</span><span class="delimeter">.</span><span class="upperident">Keys</span><span class="lowerident">
+import</span><span class="lowerident"> rand</span><span class="delimeter">.</span><span class="upperident">Random</span><span class="lowerident">
+import</span><span class="lowerident"> pga</span><span class="delimeter">.</span><span class="upperident">PGA2D</span><span class="upperident">
+
+Ball</span><span class="kw"> :</span><span class="delimeter"> {</span><span class="lowerident">
+    position</span><span class="kw"> :</span><span class="upperident"> PGA2D</span><span class="delimeter">.</span><span class="upperident">Multivector</span><span class="delimeter">,</span><span class="lowerident">
+    velocity</span><span class="kw">:</span><span class="upperident"> PGA2D</span><span class="delimeter">.</span><span class="upperident">Multivector</span><span class="delimeter">,</span><span class="lowerident">
+    mass</span><span class="kw">:</span><span class="upperident"> F32</span><span class="delimeter">,</span><span class="lowerident">
+    color</span><span class="kw">:</span><span class="upperident"> RocRay</span><span class="delimeter">.</span><span class="upperident">Color</span><span class="delimeter">,</span><span class="delimeter">
+}</span><span class="comment">
+
+# CONSTANTS</span><span class="lowerident">
+numberOfBalls</span><span class="kw"> =</span><span class="literal"> 10</span><span class="lowerident">
+minBallMass</span><span class="kw"> =</span><span class="literal"> 1</span><span class="lowerident">
+maxBallMass</span><span class="kw"> =</span><span class="literal"> 20</span><span class="lowerident">
+minSpringK</span><span class="kw"> =</span><span class="literal"> 0.001</span><span class="comment">  # Too small: barely any force</span><span class="lowerident">
+maxSpringK</span><span class="kw"> =</span><span class="literal"> 1.0</span><span class="comment">    # Too large: unstable/explosive behavior</span><span class="lowerident">
+minDamping</span><span class="kw"> =</span><span class="literal"> 0.0</span><span class="comment">    # No damping (perpetual motion)</span><span class="lowerident">
+maxDamping</span><span class="kw"> =</span><span class="literal"> 1.0</span><span class="comment">    # Full damping (immediate stop)</span><span class="upperident">
+
+Model</span><span class="kw"> :</span><span class="delimeter"> {</span><span class="lowerident"> balls</span><span class="kw"> :</span><span class="upperident"> List</span><span class="upperident"> Ball</span><span class="delimeter">,</span><span class="lowerident"> springK</span><span class="kw">:</span><span class="upperident"> F32</span><span class="delimeter">,</span><span class="lowerident">  damping</span><span class="kw">:</span><span class="upperident"> F32</span><span class="delimeter">,</span><span class="lowerident"> gravity</span><span class="kw">:</span><span class="upperident"> F32</span><span class="delimeter"> }</span><span class="lowerident">
+
+init</span><span class="op">!</span><span class="kw"> :</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="kw"> =</span><span class="op">&gt;</span><span class="upperident"> Result</span><span class="upperident"> Model</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="lowerident">
+init</span><span class="op">!</span><span class="kw"> =</span><span class="kw"> \</span><span class="delimeter">{</span><span class="delimeter">}</span><span class="kw"> -&gt;</span><span class="upperident">
+
+    RocRay</span><span class="delimeter">.</span><span class="lowerident">initWindow</span><span class="op">!</span><span class="delimeter"> {</span><span class="lowerident"> title</span><span class="kw">:</span><span class="literal"> "Spring Physics"</span><span class="delimeter"> }</span><span class="upperident">
+    RocRay</span><span class="delimeter">.</span><span class="lowerident">setTargetFPS</span><span class="op">!</span><span class="literal"> 60</span><span class="upperident">
+    RocRay</span><span class="delimeter">.</span><span class="lowerident">displayFPS</span><span class="op">!</span><span class="delimeter"> {</span><span class="lowerident"> fps</span><span class="kw">:</span><span class="upperident"> Visible</span><span class="delimeter">,</span><span class="lowerident"> pos</span><span class="kw">:</span><span class="delimeter"> {</span><span class="lowerident"> x</span><span class="kw">:</span><span class="literal"> 10</span><span class="delimeter">,</span><span class="lowerident"> y</span><span class="kw">:</span><span class="literal"> 10</span><span class="delimeter"> }</span><span class="delimeter">}</span><span class="lowerident">
+
+    balls</span><span class="kw"> =</span><span class="lowerident"> generateBalls</span><span class="upperident">
+
+    Ok</span><span class="delimeter"> {</span><span class="lowerident">
+        balls</span><span class="delimeter">,</span><span class="lowerident">
+        springK</span><span class="kw">:</span><span class="literal"> 0.02</span><span class="delimeter">,</span><span class="lowerident">
+        damping</span><span class="kw">:</span><span class="literal"> 0.9</span><span class="delimeter">,</span><span class="lowerident">
+        gravity</span><span class="kw">:</span><span class="literal"> 0.5</span><span class="delimeter">,</span><span class="delimeter">
+    }</span><span class="lowerident">
+
+render</span><span class="op">!</span><span class="kw"> :</span><span class="upperident"> Model</span><span class="delimeter">,</span><span class="upperident"> RocRay</span><span class="delimeter">.</span><span class="upperident">PlatformState</span><span class="kw"> =</span><span class="op">&gt;</span><span class="upperident"> Result</span><span class="upperident"> Model</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="lowerident">
+render</span><span class="op">!</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">model</span><span class="delimeter">,</span><span class="delimeter"> {</span><span class="lowerident"> mouse</span><span class="delimeter">,</span><span class="lowerident"> keys</span><span class="delimeter"> }</span><span class="kw"> -&gt;</span><span class="upperident">
+
+    Draw</span><span class="delimeter">.</span><span class="lowerident">draw</span><span class="op">!</span><span class="upperident"> White</span><span class="kw"> \</span><span class="delimeter">{</span><span class="delimeter">}</span><span class="kw"> -&gt;</span><span class="comment">
+
+        # Display spring stiffness and damping</span><span class="upperident">
+        Draw</span><span class="delimeter">.</span><span class="lowerident">text</span><span class="op">!</span><span class="delimeter"> {</span><span class="lowerident">
+            text</span><span class="kw">:</span><span class="literal"> "Stiffnes: $(formatF32 model.springK) - press A/D to change"</span><span class="delimeter">,</span><span class="lowerident">
+            pos</span><span class="kw">:</span><span class="delimeter"> {</span><span class="lowerident"> x</span><span class="kw">:</span><span class="literal"> 10</span><span class="delimeter">,</span><span class="lowerident"> y</span><span class="kw">:</span><span class="literal"> 30</span><span class="delimeter"> }</span><span class="delimeter">,</span><span class="lowerident">
+            size</span><span class="kw">:</span><span class="literal"> 20</span><span class="delimeter">,</span><span class="lowerident">
+            color</span><span class="kw">:</span><span class="upperident"> Black</span><span class="delimeter">,</span><span class="delimeter">
+        }</span><span class="upperident">
+
+        Draw</span><span class="delimeter">.</span><span class="lowerident">text</span><span class="op">!</span><span class="delimeter"> {</span><span class="lowerident">
+            text</span><span class="kw">:</span><span class="literal"> "Damping: $(formatF32 model.damping) - press W/S to change"</span><span class="delimeter">,</span><span class="lowerident">
+            pos</span><span class="kw">:</span><span class="delimeter"> {</span><span class="lowerident"> x</span><span class="kw">:</span><span class="literal"> 10</span><span class="delimeter">,</span><span class="lowerident"> y</span><span class="kw">:</span><span class="literal"> 50</span><span class="delimeter"> }</span><span class="delimeter">,</span><span class="lowerident">
+            size</span><span class="kw">:</span><span class="literal"> 20</span><span class="delimeter">,</span><span class="lowerident">
+            color</span><span class="kw">:</span><span class="upperident"> Black</span><span class="delimeter">,</span><span class="delimeter">
+        }</span><span class="upperident">
+
+        Draw</span><span class="delimeter">.</span><span class="lowerident">text</span><span class="op">!</span><span class="delimeter"> {</span><span class="lowerident">
+            text</span><span class="kw">:</span><span class="literal"> "Gravity: $(formatF32 model.gravity) - press UP/DOWN to change"</span><span class="delimeter">,</span><span class="lowerident">
+            pos</span><span class="kw">:</span><span class="delimeter"> {</span><span class="lowerident"> x</span><span class="kw">:</span><span class="literal"> 10</span><span class="delimeter">,</span><span class="lowerident"> y</span><span class="kw">:</span><span class="literal"> 70</span><span class="delimeter"> }</span><span class="delimeter">,</span><span class="lowerident">
+            size</span><span class="kw">:</span><span class="literal"> 20</span><span class="delimeter">,</span><span class="lowerident">
+            color</span><span class="kw">:</span><span class="upperident"> Black</span><span class="delimeter">,</span><span class="delimeter">
+        }</span><span class="upperident">
+
+        Draw</span><span class="delimeter">.</span><span class="lowerident">text</span><span class="op">!</span><span class="delimeter"> {</span><span class="lowerident">
+            text</span><span class="kw">:</span><span class="literal"> "Press R to reset the balls"</span><span class="delimeter">,</span><span class="lowerident">
+            pos</span><span class="kw">:</span><span class="delimeter"> {</span><span class="lowerident"> x</span><span class="kw">:</span><span class="literal"> 10</span><span class="delimeter">,</span><span class="lowerident"> y</span><span class="kw">:</span><span class="literal"> 90</span><span class="delimeter"> }</span><span class="delimeter">,</span><span class="lowerident">
+            size</span><span class="kw">:</span><span class="literal"> 20</span><span class="delimeter">,</span><span class="lowerident">
+            color</span><span class="kw">:</span><span class="upperident"> Black</span><span class="delimeter">,</span><span class="delimeter">
+        }</span><span class="lowerident">
+
+        forEach</span><span class="op">!</span><span class="lowerident"> model</span><span class="delimeter">.</span><span class="lowerident">balls</span><span class="kw"> \</span><span class="lowerident">ball</span><span class="kw"> -&gt;</span><span class="comment">
+
+            # Get ball position</span><span class="lowerident">
+            w</span><span class="kw"> =</span><span class="kw"> if</span><span class="delimeter"> (</span><span class="upperident">Num</span><span class="delimeter">.</span><span class="lowerident">abs</span><span class="lowerident"> ball</span><span class="delimeter">.</span><span class="lowerident">position</span><span class="delimeter">.</span><span class="lowerident">e12</span><span class="delimeter">)</span><span class="op"> &lt;</span><span class="literal"> 0.000001</span><span class="kw"> then</span><span class="literal"> 0.000001</span><span class="kw"> else</span><span class="lowerident"> ball</span><span class="delimeter">.</span><span class="lowerident">position</span><span class="delimeter">.</span><span class="lowerident">e12</span><span class="lowerident">
+            ballX</span><span class="kw"> =</span><span class="lowerident"> ball</span><span class="delimeter">.</span><span class="lowerident">position</span><span class="delimeter">.</span><span class="lowerident">e20</span><span class="op"> /</span><span class="lowerident"> w</span><span class="lowerident">
+            ballY</span><span class="kw"> =</span><span class="lowerident"> ball</span><span class="delimeter">.</span><span class="lowerident">position</span><span class="delimeter">.</span><span class="lowerident">e01</span><span class="op"> /</span><span class="lowerident"> w</span><span class="comment">
+
+            # Draw spring to mouse position</span><span class="upperident">
+            Draw</span><span class="delimeter">.</span><span class="lowerident">line</span><span class="op">!</span><span class="delimeter"> {</span><span class="lowerident">
+                start</span><span class="kw">:</span><span class="delimeter"> {</span><span class="lowerident"> x</span><span class="kw">:</span><span class="lowerident"> ballX</span><span class="delimeter">,</span><span class="lowerident"> y</span><span class="kw">:</span><span class="lowerident"> ballY</span><span class="delimeter"> }</span><span class="delimeter">,</span><span class="lowerident">
+                end</span><span class="kw">:</span><span class="lowerident"> mouse</span><span class="delimeter">.</span><span class="lowerident">position</span><span class="delimeter">,</span><span class="lowerident">
+                color</span><span class="kw">:</span><span class="upperident"> Gray</span><span class="delimeter">,</span><span class="delimeter">
+            }</span><span class="comment">
+
+            # Draw ball (vary radius based on mass)</span><span class="lowerident">
+            radius</span><span class="kw"> =</span><span class="literal"> 1</span><span class="op"> +</span><span class="delimeter"> (</span><span class="lowerident">ball</span><span class="delimeter">.</span><span class="lowerident">mass</span><span class="op"> -</span><span class="lowerident"> minBallMass</span><span class="delimeter">)</span><span class="upperident">
+            Draw</span><span class="delimeter">.</span><span class="lowerident">circle</span><span class="op">!</span><span class="delimeter"> {</span><span class="lowerident">
+                center</span><span class="kw">:</span><span class="delimeter"> {</span><span class="lowerident"> x</span><span class="kw">:</span><span class="lowerident"> ballX</span><span class="delimeter">,</span><span class="lowerident"> y</span><span class="kw">:</span><span class="lowerident"> ballY</span><span class="delimeter"> }</span><span class="delimeter">,</span><span class="lowerident">
+                radius</span><span class="delimeter">,</span><span class="lowerident">
+                color</span><span class="kw">:</span><span class="lowerident"> ball</span><span class="delimeter">.</span><span class="lowerident">color</span><span class="delimeter">,</span><span class="delimeter">
+            }</span><span class="delimeter">
+
+            {</span><span class="delimeter">}</span><span class="lowerident">
+
+    balls</span><span class="kw"> =</span><span class="lowerident">
+        updateBalls</span><span class="lowerident"> model</span><span class="lowerident"> mouse</span><span class="delimeter">.</span><span class="lowerident">position</span><span class="kw">
+        |&gt;</span><span class="kw"> \</span><span class="lowerident">b</span><span class="kw"> -&gt;</span><span class="comment">
+            # reset balls if space is pressed</span><span class="kw">
+            if</span><span class="upperident"> Keys</span><span class="delimeter">.</span><span class="lowerident">pressed</span><span class="lowerident"> keys</span><span class="upperident"> KeyR</span><span class="kw"> then</span><span class="lowerident">
+                generateBalls</span><span class="kw">
+            else</span><span class="lowerident">
+                b</span><span class="lowerident">
+
+    springK</span><span class="kw"> =</span><span class="kw">
+        if</span><span class="upperident"> Keys</span><span class="delimeter">.</span><span class="lowerident">pressed</span><span class="lowerident"> keys</span><span class="upperident"> KeyA</span><span class="kw"> then</span><span class="lowerident">
+            model</span><span class="delimeter">.</span><span class="lowerident">springK</span><span class="op"> -</span><span class="literal"> 0.01</span><span class="kw">
+            |&gt;</span><span class="lowerident"> limit</span><span class="delimeter"> {</span><span class="lowerident"> min</span><span class="kw">:</span><span class="lowerident"> minSpringK</span><span class="delimeter">,</span><span class="lowerident"> max</span><span class="kw">:</span><span class="lowerident"> maxSpringK</span><span class="delimeter"> }</span><span class="kw">
+        else</span><span class="kw"> if</span><span class="upperident"> Keys</span><span class="delimeter">.</span><span class="lowerident">pressed</span><span class="lowerident"> keys</span><span class="upperident"> KeyD</span><span class="kw"> then</span><span class="lowerident">
+            model</span><span class="delimeter">.</span><span class="lowerident">springK</span><span class="op"> +</span><span class="literal"> 0.01</span><span class="kw">
+            |&gt;</span><span class="lowerident"> limit</span><span class="delimeter"> {</span><span class="lowerident"> min</span><span class="kw">:</span><span class="lowerident"> minSpringK</span><span class="delimeter">,</span><span class="lowerident"> max</span><span class="kw">:</span><span class="lowerident"> maxSpringK</span><span class="delimeter"> }</span><span class="kw">
+        else</span><span class="lowerident">
+            model</span><span class="delimeter">.</span><span class="lowerident">springK</span><span class="lowerident">
+
+    damping</span><span class="kw"> =</span><span class="kw">
+        if</span><span class="upperident"> Keys</span><span class="delimeter">.</span><span class="lowerident">pressed</span><span class="lowerident"> keys</span><span class="upperident"> KeyW</span><span class="kw"> then</span><span class="lowerident">
+            model</span><span class="delimeter">.</span><span class="lowerident">damping</span><span class="op"> +</span><span class="literal"> 0.01</span><span class="kw">
+            |&gt;</span><span class="lowerident"> limit</span><span class="delimeter"> {</span><span class="lowerident"> min</span><span class="kw">:</span><span class="lowerident"> minDamping</span><span class="delimeter">,</span><span class="lowerident"> max</span><span class="kw">:</span><span class="lowerident"> maxDamping</span><span class="delimeter"> }</span><span class="kw">
+        else</span><span class="kw"> if</span><span class="upperident"> Keys</span><span class="delimeter">.</span><span class="lowerident">pressed</span><span class="lowerident"> keys</span><span class="upperident"> KeyS</span><span class="kw"> then</span><span class="lowerident">
+            model</span><span class="delimeter">.</span><span class="lowerident">damping</span><span class="op"> -</span><span class="literal"> 0.01</span><span class="kw">
+            |&gt;</span><span class="lowerident"> limit</span><span class="delimeter"> {</span><span class="lowerident"> min</span><span class="kw">:</span><span class="lowerident"> minDamping</span><span class="delimeter">,</span><span class="lowerident"> max</span><span class="kw">:</span><span class="lowerident"> maxDamping</span><span class="delimeter"> }</span><span class="kw">
+        else</span><span class="lowerident">
+            model</span><span class="delimeter">.</span><span class="lowerident">damping</span><span class="lowerident">
+
+    gravity</span><span class="kw"> =</span><span class="kw">
+        if</span><span class="upperident"> Keys</span><span class="delimeter">.</span><span class="lowerident">pressed</span><span class="lowerident"> keys</span><span class="upperident"> KeyUp</span><span class="kw"> then</span><span class="lowerident">
+            model</span><span class="delimeter">.</span><span class="lowerident">gravity</span><span class="op"> +</span><span class="literal"> 0.1</span><span class="kw">
+            |&gt;</span><span class="lowerident"> limit</span><span class="delimeter"> {</span><span class="lowerident"> min</span><span class="kw">:</span><span class="literal"> 0</span><span class="delimeter">,</span><span class="lowerident"> max</span><span class="kw">:</span><span class="literal"> 10</span><span class="delimeter"> }</span><span class="kw">
+        else</span><span class="kw"> if</span><span class="upperident"> Keys</span><span class="delimeter">.</span><span class="lowerident">pressed</span><span class="lowerident"> keys</span><span class="upperident"> KeyDown</span><span class="kw"> then</span><span class="lowerident">
+            model</span><span class="delimeter">.</span><span class="lowerident">gravity</span><span class="op"> -</span><span class="literal"> 0.1</span><span class="kw">
+            |&gt;</span><span class="lowerident"> limit</span><span class="delimeter"> {</span><span class="lowerident"> min</span><span class="kw">:</span><span class="literal"> 0</span><span class="delimeter">,</span><span class="lowerident"> max</span><span class="kw">:</span><span class="literal"> 10</span><span class="delimeter"> }</span><span class="kw">
+        else</span><span class="lowerident">
+            model</span><span class="delimeter">.</span><span class="lowerident">gravity</span><span class="upperident">
+
+    Ok</span><span class="delimeter"> {</span><span class="lowerident">model</span><span class="kw"> &amp;</span><span class="lowerident"> balls</span><span class="delimeter">,</span><span class="lowerident"> springK</span><span class="delimeter">,</span><span class="lowerident"> damping</span><span class="delimeter">,</span><span class="lowerident"> gravity</span><span class="delimeter"> }</span><span class="lowerident">
+
+updateBalls</span><span class="kw"> :</span><span class="upperident"> Model</span><span class="delimeter">,</span><span class="upperident"> RocRay</span><span class="delimeter">.</span><span class="upperident">Vector2</span><span class="kw"> -&gt;</span><span class="upperident"> List</span><span class="upperident"> Ball</span><span class="lowerident">
+updateBalls</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">model</span><span class="delimeter">,</span><span class="lowerident"> mousePos</span><span class="kw"> -&gt;</span><span class="upperident">
+
+    List</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="lowerident"> model</span><span class="delimeter">.</span><span class="lowerident">balls</span><span class="kw"> \</span><span class="lowerident">ball</span><span class="kw"> -&gt;</span><span class="comment">
+
+        # Get ball position</span><span class="lowerident">
+        w</span><span class="kw"> =</span><span class="kw"> if</span><span class="delimeter"> (</span><span class="upperident">Num</span><span class="delimeter">.</span><span class="lowerident">abs</span><span class="lowerident"> ball</span><span class="delimeter">.</span><span class="lowerident">position</span><span class="delimeter">.</span><span class="lowerident">e12</span><span class="delimeter">)</span><span class="op"> &lt;</span><span class="literal"> 0.000001</span><span class="kw"> then</span><span class="literal"> 0.000001</span><span class="kw"> else</span><span class="lowerident"> ball</span><span class="delimeter">.</span><span class="lowerident">position</span><span class="delimeter">.</span><span class="lowerident">e12</span><span class="lowerident">
+        ballX</span><span class="kw"> =</span><span class="lowerident"> ball</span><span class="delimeter">.</span><span class="lowerident">position</span><span class="delimeter">.</span><span class="lowerident">e20</span><span class="op"> /</span><span class="lowerident"> w</span><span class="lowerident">
+        ballY</span><span class="kw"> =</span><span class="lowerident"> ball</span><span class="delimeter">.</span><span class="lowerident">position</span><span class="delimeter">.</span><span class="lowerident">e01</span><span class="op"> /</span><span class="lowerident"> w</span><span class="comment">
+
+        # Calculate spring force direction as an ideal point at infinity</span><span class="lowerident">
+        springForce</span><span class="kw"> =</span><span class="upperident"> PGA2D</span><span class="delimeter">.</span><span class="lowerident">idealPoint</span><span class="delimeter"> {</span><span class="lowerident">
+            x</span><span class="kw">:</span><span class="delimeter"> (</span><span class="lowerident">mousePos</span><span class="delimeter">.</span><span class="lowerident">x</span><span class="op"> -</span><span class="lowerident"> ballX</span><span class="delimeter">)</span><span class="op"> *</span><span class="lowerident"> model</span><span class="delimeter">.</span><span class="lowerident">springK</span><span class="op"> /</span><span class="lowerident"> ball</span><span class="delimeter">.</span><span class="lowerident">mass</span><span class="delimeter">,</span><span class="lowerident">
+            y</span><span class="kw">:</span><span class="op"> -</span><span class="literal">1</span><span class="op"> *</span><span class="delimeter"> (</span><span class="lowerident">mousePos</span><span class="delimeter">.</span><span class="lowerident">y</span><span class="op"> -</span><span class="lowerident"> ballY</span><span class="delimeter">)</span><span class="op"> *</span><span class="lowerident"> model</span><span class="delimeter">.</span><span class="lowerident">springK</span><span class="op"> /</span><span class="lowerident"> ball</span><span class="delimeter">.</span><span class="lowerident">mass</span><span class="delimeter">,</span><span class="delimeter">
+        }</span><span class="comment">
+
+        # Calculate gravity force</span><span class="lowerident">
+        gravityForce</span><span class="kw"> =</span><span class="upperident"> PGA2D</span><span class="delimeter">.</span><span class="lowerident">idealPoint</span><span class="delimeter"> {</span><span class="lowerident">
+            x</span><span class="kw">:</span><span class="literal"> 0</span><span class="delimeter">,</span><span class="lowerident">
+            y</span><span class="kw">:</span><span class="op"> -</span><span class="lowerident">model</span><span class="delimeter">.</span><span class="lowerident">gravity</span><span class="delimeter">,</span><span class="delimeter">
+        }</span><span class="lowerident">
+
+        combindedForce</span><span class="kw"> =</span><span class="upperident"> PGA2D</span><span class="delimeter">.</span><span class="lowerident">add</span><span class="lowerident"> springForce</span><span class="lowerident"> gravityForce</span><span class="comment">
+
+        # Update velocity</span><span class="lowerident">
+        velocity</span><span class="kw"> =</span><span class="upperident"> PGA2D</span><span class="delimeter">.</span><span class="lowerident">muls</span><span class="delimeter"> (</span><span class="delimeter">(</span><span class="upperident">PGA2D</span><span class="delimeter">.</span><span class="lowerident">add</span><span class="lowerident"> ball</span><span class="delimeter">.</span><span class="lowerident">velocity</span><span class="lowerident"> combindedForce</span><span class="delimeter">)</span><span class="delimeter">)</span><span class="lowerident"> model</span><span class="delimeter">.</span><span class="lowerident">damping</span><span class="comment">
+
+        # Create translator from velocity</span><span class="lowerident">
+        translator</span><span class="kw"> =</span><span class="upperident"> PGA2D</span><span class="delimeter">.</span><span class="lowerident">translator</span><span class="delimeter"> {</span><span class="lowerident">
+            dx</span><span class="kw">:</span><span class="op"> -</span><span class="lowerident">velocity</span><span class="delimeter">.</span><span class="lowerident">e01</span><span class="delimeter">,</span><span class="lowerident">
+            dy</span><span class="kw">:</span><span class="op"> -</span><span class="lowerident">velocity</span><span class="delimeter">.</span><span class="lowerident">e20</span><span class="delimeter">,</span><span class="delimeter">
+        }</span><span class="comment">
+
+        # Update ball position using translator</span><span class="lowerident">
+        position</span><span class="kw"> =</span><span class="upperident"> PGA2D</span><span class="delimeter">.</span><span class="lowerident">mul</span><span class="lowerident"> translator</span><span class="lowerident"> ball</span><span class="delimeter">.</span><span class="lowerident">position</span><span class="delimeter">
+
+        {</span><span class="lowerident"> position</span><span class="delimeter">,</span><span class="lowerident"> velocity</span><span class="delimeter">,</span><span class="lowerident"> mass</span><span class="kw">:</span><span class="lowerident"> ball</span><span class="delimeter">.</span><span class="lowerident">mass</span><span class="delimeter">,</span><span class="lowerident"> color</span><span class="kw">:</span><span class="lowerident"> ball</span><span class="delimeter">.</span><span class="lowerident">color</span><span class="delimeter"> }</span><span class="lowerident">
+
+generateBalls</span><span class="kw"> :</span><span class="upperident"> List</span><span class="upperident"> Ball</span><span class="lowerident">
+generateBalls</span><span class="kw"> =</span><span class="upperident">
+    List</span><span class="delimeter">.</span><span class="lowerident">range</span><span class="delimeter"> {</span><span class="lowerident"> start</span><span class="kw">:</span><span class="upperident"> At</span><span class="literal"> 0</span><span class="delimeter">,</span><span class="lowerident"> end</span><span class="kw">:</span><span class="upperident"> Before</span><span class="lowerident"> numberOfBalls</span><span class="delimeter"> }</span><span class="kw">
+    |&gt;</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">walk</span><span class="delimeter"> {</span><span class="lowerident"> seed</span><span class="kw">:</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">seed</span><span class="literal"> 1234</span><span class="delimeter">,</span><span class="lowerident"> balls</span><span class="kw">:</span><span class="delimeter"> [</span><span class="delimeter">]</span><span class="delimeter"> }</span><span class="kw"> \</span><span class="lowerident">state</span><span class="delimeter">,</span><span class="lowerident"> _</span><span class="kw"> -&gt;</span><span class="lowerident">
+
+        gen</span><span class="kw"> =</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">step</span><span class="lowerident"> state</span><span class="delimeter">.</span><span class="lowerident">seed</span><span class="lowerident"> ballGenerator</span><span class="delimeter">
+
+        {</span><span class="lowerident"> seed</span><span class="kw">:</span><span class="lowerident"> gen</span><span class="delimeter">.</span><span class="lowerident">state</span><span class="delimeter">,</span><span class="lowerident"> balls</span><span class="kw">:</span><span class="upperident"> List</span><span class="delimeter">.</span><span class="lowerident">append</span><span class="lowerident"> state</span><span class="delimeter">.</span><span class="lowerident">balls</span><span class="lowerident"> gen</span><span class="delimeter">.</span><span class="lowerident">value</span><span class="delimeter"> }</span><span class="kw">
+
+    |&gt;</span><span class="delimeter"> .</span><span class="lowerident">balls</span><span class="lowerident">
+
+ballGenerator</span><span class="kw"> :</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="upperident">Generator</span><span class="upperident"> Ball</span><span class="lowerident">
+ballGenerator</span><span class="kw"> =</span><span class="delimeter">
+    {</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">chain</span><span class="kw"> &lt;-</span><span class="lowerident">
+        position</span><span class="kw">:</span><span class="delimeter"> {</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">chain</span><span class="kw"> &lt;-</span><span class="lowerident">
+            x</span><span class="kw">:</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">boundedU32</span><span class="literal"> 0</span><span class="literal"> 800</span><span class="kw"> |&gt;</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="upperident"> Num</span><span class="delimeter">.</span><span class="lowerident">toF32</span><span class="delimeter">,</span><span class="lowerident">
+            y</span><span class="kw">:</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">boundedU32</span><span class="literal"> 0</span><span class="literal"> 600</span><span class="kw"> |&gt;</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="upperident"> Num</span><span class="delimeter">.</span><span class="lowerident">toF32</span><span class="delimeter">,</span><span class="delimeter">
+        }</span><span class="kw">
+        |&gt;</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="upperident"> PGA2D</span><span class="delimeter">.</span><span class="lowerident">point</span><span class="delimeter">,</span><span class="lowerident">
+        velocity</span><span class="kw">:</span><span class="delimeter"> {</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">chain</span><span class="kw"> &lt;-</span><span class="lowerident">
+            x</span><span class="kw">:</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">boundedU32</span><span class="literal"> 0</span><span class="literal"> 10</span><span class="kw"> |&gt;</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="upperident"> Num</span><span class="delimeter">.</span><span class="lowerident">toF32</span><span class="delimeter">,</span><span class="lowerident">
+            y</span><span class="kw">:</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">boundedU32</span><span class="literal"> 0</span><span class="literal"> 10</span><span class="kw"> |&gt;</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="upperident"> Num</span><span class="delimeter">.</span><span class="lowerident">toF32</span><span class="delimeter">,</span><span class="delimeter">
+        }</span><span class="kw">
+        |&gt;</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="upperident"> PGA2D</span><span class="delimeter">.</span><span class="lowerident">idealPoint</span><span class="delimeter">,</span><span class="lowerident">
+        mass</span><span class="kw">:</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">boundedU32</span><span class="lowerident"> minBallMass</span><span class="lowerident"> maxBallMass</span><span class="kw"> |&gt;</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="upperident"> Num</span><span class="delimeter">.</span><span class="lowerident">toF32</span><span class="delimeter">,</span><span class="lowerident">
+        color</span><span class="kw">:</span><span class="delimeter"> {</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">chain</span><span class="kw"> &lt;-</span><span class="lowerident">
+            r</span><span class="kw">:</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">boundedU8</span><span class="literal"> 0</span><span class="literal"> 255</span><span class="delimeter">,</span><span class="lowerident">
+            g</span><span class="kw">:</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">boundedU8</span><span class="literal"> 0</span><span class="literal"> 255</span><span class="delimeter">,</span><span class="lowerident">
+            b</span><span class="kw">:</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">boundedU8</span><span class="literal"> 0</span><span class="literal"> 255</span><span class="delimeter">,</span><span class="delimeter">
+        }</span><span class="kw"> |&gt;</span><span class="upperident"> Random</span><span class="delimeter">.</span><span class="lowerident">map</span><span class="kw"> \</span><span class="delimeter">{</span><span class="lowerident"> r</span><span class="delimeter">,</span><span class="lowerident"> g</span><span class="delimeter">,</span><span class="lowerident"> b</span><span class="delimeter"> }</span><span class="kw"> -&gt;</span><span class="upperident"> RGBA</span><span class="lowerident"> r</span><span class="lowerident"> g</span><span class="lowerident"> b</span><span class="literal"> 255</span><span class="delimeter">,</span><span class="delimeter">
+    }</span><span class="lowerident">
+
+forEach</span><span class="op">!</span><span class="kw"> :</span><span class="upperident"> List</span><span class="lowerident"> a</span><span class="delimeter">,</span><span class="delimeter"> (</span><span class="lowerident">a</span><span class="kw"> =</span><span class="op">&gt;</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="delimeter">)</span><span class="kw"> =</span><span class="op">&gt;</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="lowerident">
+forEach</span><span class="op">!</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">l</span><span class="delimeter">,</span><span class="lowerident"> f</span><span class="op">!</span><span class="kw"> -&gt;</span><span class="kw">
+    when</span><span class="lowerident"> l</span><span class="kw"> is</span><span class="delimeter">
+        [</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="delimeter"> {</span><span class="delimeter">}</span><span class="delimeter">
+        [</span><span class="lowerident">x</span><span class="delimeter">,</span><span class="delimeter"> .</span><span class="delimeter">.</span><span class="kw"> as</span><span class="lowerident"> xs</span><span class="delimeter">]</span><span class="kw"> -&gt;</span><span class="lowerident">
+            f</span><span class="op">!</span><span class="lowerident"> x</span><span class="lowerident">
+            forEach</span><span class="op">!</span><span class="lowerident"> xs</span><span class="lowerident"> f</span><span class="op">!</span><span class="lowerident">
+
+limit</span><span class="kw"> :</span><span class="upperident"> F32</span><span class="delimeter">,</span><span class="delimeter"> {</span><span class="lowerident"> min</span><span class="kw">:</span><span class="upperident"> F32</span><span class="delimeter">,</span><span class="lowerident"> max</span><span class="kw">:</span><span class="upperident"> F32</span><span class="delimeter">}</span><span class="kw"> -&gt;</span><span class="upperident"> F32</span><span class="lowerident">
+limit</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">x</span><span class="delimeter">,</span><span class="delimeter"> {</span><span class="lowerident"> min</span><span class="delimeter">,</span><span class="lowerident"> max</span><span class="delimeter"> }</span><span class="kw"> -&gt;</span><span class="kw">
+    if</span><span class="lowerident"> x</span><span class="op"> &lt;</span><span class="lowerident"> min</span><span class="kw"> then</span><span class="lowerident"> min</span><span class="kw"> else</span><span class="kw"> if</span><span class="lowerident"> x</span><span class="op"> &gt;</span><span class="lowerident"> max</span><span class="kw"> then</span><span class="lowerident"> max</span><span class="kw"> else</span><span class="lowerident"> x</span><span class="comment">
+
+# format a float to a string with 2 decimal places</span><span class="lowerident">
+formatF32</span><span class="kw"> :</span><span class="upperident"> F32</span><span class="kw"> -&gt;</span><span class="upperident"> Str</span><span class="lowerident">
+formatF32</span><span class="kw"> =</span><span class="kw"> \</span><span class="lowerident">f32</span><span class="kw"> -&gt;</span><span class="lowerident">
+    rounded</span><span class="kw"> =</span><span class="upperident"> Num</span><span class="delimeter">.</span><span class="lowerident">round</span><span class="delimeter"> (</span><span class="lowerident">f32</span><span class="op"> *</span><span class="literal"> 100</span><span class="delimeter">)</span><span class="lowerident">
+    whole</span><span class="kw"> =</span><span class="lowerident"> rounded</span><span class="op"> //</span><span class="literal"> 100</span><span class="lowerident">
+    decimal</span><span class="kw"> =</span><span class="upperident"> Num</span><span class="delimeter">.</span><span class="lowerident">abs</span><span class="delimeter"> (</span><span class="lowerident">rounded</span><span class="op"> %</span><span class="literal"> 100</span><span class="delimeter">)</span><span class="lowerident">
+    decimalStr</span><span class="kw"> =</span><span class="kw">
+        if</span><span class="lowerident"> decimal</span><span class="op"> &lt;</span><span class="literal"> 10</span><span class="kw"> then</span><span class="literal">
+            "0$(Num.toStr decimal)"</span><span class="kw">
+        else</span><span class="upperident">
+            Num</span><span class="delimeter">.</span><span class="lowerident">toStr</span><span class="lowerident"> decimal</span><span class="literal">
+
+    "$(Num.toStr whole).$(decimalStr)"</span></samp></pre></main><footer></footer></body></html>

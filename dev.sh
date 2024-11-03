@@ -8,4 +8,4 @@ roc check main.roc
 
 roc dev main.roc -- content docs
 
-simple-http-server --nocache -i -p 3000 -- docs/
+simple-http-server --nocache --ip 127.0.0.1 --index --open -- docs/
