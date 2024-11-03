@@ -4,11 +4,11 @@
 
 This is a simple physics simulation of a number of balls that are attracted to the mouse, and experience gravity.
 
-It was made using an WIP branch from [lukewilliamboswell/roc-ray](https://github.com/lukewilliamboswell/roc-ray) which is a graphics platform for the [roc programming language](https://www.roc-lang.org).
+It was made using a WIP branch from [lukewilliamboswell/roc-ray](https://github.com/lukewilliamboswell/roc-ray) which is a graphics platform for the [roc programming language](https://www.roc-lang.org).
 
-I wanted to find the simplest thing I could make to test the platform end to end, and also a new package [lukewilliamboswell/roc-pga2d](https://github.com/lukewilliamboswell/roc-pga2d) which I put together to learn more about Geometric Algebra and to help with developing the roc-ray platform and more interesting examples.
+I wanted to find something simple to test the platform, and a new package [lukewilliamboswell/roc-pga2d](https://github.com/lukewilliamboswell/roc-pga2d) I made to learn more about Geometric Algebra and to help develop roc-ray with more interesting demos.
 
-(Note: this uses the mouse... sorry mobile users I hadn't thought about you guys when making this 😅)
+(Note: this uses the mouse... sorry mobile users I hadn't thought about you when making this 😅)
 
 <style>
   #canvas {
