@@ -1,0 +1,101 @@
+<!DOCTYPE html><html  lang="en" class="no-js"><head><meta  charset="utf-8"><title></title><meta  name="description" content=""><meta  name="viewport" content="width=device-width"><link  rel="stylesheet" href="/site.css"><script  async="" src="https://www.googletagmanager.com/gtag/js?id=G-WP50D6PVC3"></script><script>window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+
+gtag('config', 'G-WP50D6PVC3');</script></head><body  id="index-page"><main><p><a href="/">Return to Home</a></p>
+<h1>Roc Platforms: Supporting multi-entrypoint hosts</h1>
+<p><time class="post-date" datetime="2025-08-30">30 Aug 2025</time> <em>~8 mins reading time</em></p>
+<p>This post summarises a problem we discovered while implementing the test platforms: how to “run” a Roc app with our pre-built interpreter-shim when the platform host expects multiple entrypoints. The solution involves a small layer of glue generated at runtime that maps multiple entrypoints to a single interpreter entrypoint.</p>
+<p>The short version:</p>
+<ul>
+<li>Platform hosts expect to find multiple entrypoint symbols provided by the Roc app (e.g. <code>init!</code>, <code>update!</code>, <code>render!</code>).</li>
+<li>We compile and embed an interpreter shim into the Roc CLI which exposes a single generic entrypoint.</li>
+<li>At runtime, the Roc CLI generates a tiny LLVM bitcode file that defines the expected host symbols and delegates them to the single interpreter entrypoint.</li>
+<li>This enables fast dev loops using the interpreter for multi-entrypoint hosts -- without changing the host ABI.</li>
+</ul>
+<h2>Background: Roc App + Platform Host = Executable</h2>
+<p>A Roc application is linked with a platform host to produce an executable.</p>
+<ul>
+<li>Platform authors provide a static library (e.g. <code>libhost.a</code>, <code>host.lib</code>) which we call the platform host.</li>
+<li><code>roc build app.roc</code> compiles the Roc app to machine code and links it with the host to produce an executable.</li>
+<li>Hosts expect the app to define a set of entrypoints—for example, <code>init!</code>, <code>update!</code>, and <code>render!</code>.</li>
+<li>At runtime, the host calls those entrypoints, passing a struct of function pointers for Roc.</li>
+</ul>
+<p>Here’s an illustration in Zig of a host invoking two entrypoints implemented by a Roc app:</p>
+<pre><samp>fn platform_main() !void {
+    // Create the RocOps struct; roc_alloc, roc_dealloc, roc_crash, roc_dbg, etc...
+    var roc_ops = RocOps{ ... };
+
+    // Generate random integers
+    var rand = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
+    const a = rand.random().intRangeAtMost(i64, 0, 100);
+    const b = rand.random().intRangeAtMost(i64, 0, 100);
+
+    // Arguments struct for passing two integers to Roc as a tuple
+    const Args = extern struct { a: i64, b: i64 };
+    var args = Args{ .a = a, .b = b };
+
+    // Call `addInts`
+    var add_result: i64 = undefined;
+    roc__addInts(&roc_ops, @as(*anyopaque, @ptrCast(&add_result)), @as(*anyopaque, @ptrCast(&args)));
+
+    // Call `multiplyInts`
+    var multiply_result: i64 = undefined;
+    roc__multiplyInts(&roc_ops, @as(*anyopaque, @ptrCast(&multiply_result)), @as(*anyopaque, @ptrCast(&args)));
+}
+</pre></samp>
+<p>This is the “normal” compiled workflow.</p>
+<h2>The Interpreter Shim</h2>
+<p>For a fast dev loop (<code>roc app.roc</code> without a subcommand), we use an interpreter which is very fast to start executing as it avoids lowering the program to machine code and linking.</p>
+<ul>
+<li>We pre-compile an interpreter shim as a static library and embed it into the Roc CLI (<code>libroc_interpreter_shim.a</code>).</li>
+<li>When you “run” an app, the CLI links the host with this interpreter shim (instead of an app object file) and caches the resulting executable. This can be done once, so subsequent runs can use the cached executable instead.</li>
+<li>The CLI is responsible for file I/O and loads the app, parsing/canonicalization/typechecking it etc to produce a <code>ModuleEnv</code>, which is a cacheable intermediate representation of the application. Note if the source code has not changed the CLI can load this from cache instead.</li>
+<li>It then forks a child process to run the shim and passes the <code>ModuleEnv</code> via inter-process communication (IPC).</li>
+</ul>
+<p>This gives fast iteration: your app logic runs under the interpreter while the host and ABI remain identical.</p>
+<h2>The multi-entrypoint problem</h2>
+<p>Pre-building the interpreter shim means it cannot know the platform and the expected entrypoints ahead of time. To remain platform-agnostic, the shim is compiled to export only a single generic entrypoint:</p>
+<pre><samp>export fn roc_entrypoint(entry_idx: u32, ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, arg_ptr: ?*anyopaque) callconv(.C) void
+</pre></samp>
+<ul>
+<li><code>roc_entrypoint</code> is the shim’s single entry.</li>
+<li>The first argument is an <code>entry_idx</code> used to dispatch to the intended platform entry (i.e. “which function did the host want to call?”).</li>
+<li>That’s convenient for the interpreter, but the host still needs multiple concrete symbols to link against.</li>
+</ul>
+<p><strong>So: how do we link a host that expects multiple symbols with an interpreter shim that only exports one?</strong></p>
+<h2>The multi-entrypoint solution</h2>
+<p>We generate a thin, per-platform “adapter” at runtime using Zig’s standard library API <code>std.zig.llvm.Builder</code>.</p>
+<ul>
+<li>The Roc CLI looks at the platform’s API to determine which entrypoint symbols the host needs.</li>
+<li>It then generates a small LLVM bitcode module that defines each required symbol and forwards all calls to the single interpreter entry (<code>roc_entrypoint</code>), passing an <code>entry_idx</code> that identifies the target.</li>
+<li>The CLI compiles this bitcode into an object, then links: host + interpreter shim + this small adapter object.</li>
+<li>The result is an executable with all expected symbols provided, and an interpreter implementation in place of a fully compiled application.</li>
+</ul>
+<p>A simplified LLVM bitcode file example for three entrypoints:</p>
+<pre><samp>; ModuleID = 'platform_host_shim'
+source_filename = "platform_host_shim"
+
+declare void @roc_entrypoint(i32 %0, ptr %1, ptr %2, ptr %3)
+
+define void @roc__init(ptr %0, ptr %1, ptr %2) {
+entry:
+  call void @roc_entrypoint(i32 0, ptr %0, ptr %1, ptr %2)
+  ret void
+}
+
+define void @roc__render(ptr %0, ptr %1, ptr %2) {
+entry:
+  call void @roc_entrypoint(i32 1, ptr %0, ptr %1, ptr %2)
+  ret void
+}
+
+define void @roc__update(ptr %0, ptr %1, ptr %2) {
+entry:
+  call void @roc_entrypoint(i32 2, ptr %0, ptr %1, ptr %2)
+  ret void
+}
+</pre></samp>
+<p>Each defined symbol (<code>roc__init</code>, <code>roc__render</code>, <code>roc__update</code>) and forwards to <code>roc_entrypoint</code> with a distinct index.</p>
+<p>This keeps the interpreter shim simple and reusable, while meeting every platform host’s multi-entrypoint ABI.</p>
+</main><footer></footer></body></html>

@@ -1,60 +1,61 @@
-app [main] { pf: platform "https://github.com/lukewilliamboswell/basic-ssg/releases/download/0.5.0/MlW8VJCTuOFrlKRiW9h-WPOv4_5FqTrqlZZOi5fMqdo.tar.br" }
+app [main!] { pf: platform "https://github.com/lukewilliamboswell/basic-ssg/releases/download/0.9.0/NLodHsSCfTRet3ssC6WUTJVelmrHTqy9YJo2EdnslgM.tar.br" }
 
 import pf.SSG
 import pf.Types exposing [Args]
 import pf.Html exposing [link, script, footer, text, html, head, body, meta]
 import pf.Html.Attributes exposing [attribute, class, src, name, id, charset, href, rel, content, lang]
 
-main : Args -> Task {} _
-main = \{ inputDir, outputDir } ->
+main! : Args => Result {} _
+main! = \{ input_dir, output_dir } ->
 
     # get the path and url of markdown files in content directory
-    files = SSG.files! inputDir
+    files = SSG.files!(input_dir)?
 
     # helper Task to process each file
-    processFile = \{ path, relpath, url } ->
+    process_file! = \{ path, relpath, url } ->
 
-        inHtml = SSG.parseMarkdown! path
+        in_html = SSG.parse_markdown!(path)?
 
-        outHtml = transformFileContent url inHtml
+        out_html = transform_file_content(url, in_html)
 
-        SSG.writeFile { outputDir, relpath, content: outHtml }
+        SSG.write_file!({ output_dir, relpath, content: out_html })
+
     ## process each file
-    Task.forEach! files processFile
+    List.for_each_try!(files, process_file!)
 
-pageData =
+page_data =
     Dict.empty {}
     |> Dict.insert "index.html" { title: "Luke Boswell", description: "Personal site for Luke Boswell" }
     |> Dict.insert "roc-htmx-demo/index.html" { title: "Roc+htmx Demo", description: "An early exploration of Roc+htmx" }
 
-getPage : Str -> { title : Str, description : Str }
-getPage = \current ->
-    Dict.get pageData current
-    |> Result.withDefault { title: "", description: "" }
+get_page : Str -> { title : Str, description : Str }
+get_page = \current ->
+    Dict.get page_data current
+    |> Result.with_default { title: "", description: "" }
 
-getTitle : Str -> Str
-getTitle = \current ->
-    getPage current |> .title
+get_title : Str -> Str
+get_title = \current ->
+    get_page current |> .title
 
-getDescription : Str -> Str
-getDescription = \current ->
-    getPage current |> .description
+get_description : Str -> Str
+get_description = \current ->
+    get_page current |> .description
 
-transformFileContent : Str, Str -> Str
-transformFileContent = \page, htmlContent ->
-    Html.render (view page htmlContent)
+transform_file_content : Str, Str -> Str
+transform_file_content = \page, html_content ->
+    Html.render (view page html_content)
 
 view : Str, Str -> Html.Node
-view = \page, htmlContent ->
-    mainBody = [text htmlContent]
+view = \page, html_content ->
+    main_body = [text html_content]
 
-    bodyAttrs = [id "index-page"]
+    body_attrs = [id "index-page"]
 
     html [lang "en", class "no-js"] [
         head [] [
             meta [charset "utf-8"],
-            Html.title [] [text (getTitle page)],
-            meta [name "description", content (getDescription page)],
+            Html.title [] [text (get_title page)],
+            meta [name "description", content (get_description page)],
             meta [name "viewport", content "width=device-width"],
             link [rel "stylesheet", href "/site.css"],
 
@@ -74,8 +75,8 @@ view = \page, htmlContent ->
                     """
             ],
         ],
-        body bodyAttrs [
-            Html.main [] mainBody,
+        body body_attrs [
+            Html.main [] main_body,
             footer [] [],
         ],
     ]
