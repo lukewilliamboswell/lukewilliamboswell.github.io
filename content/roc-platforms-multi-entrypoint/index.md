@@ -10,7 +10,7 @@ The short version:
 - Platform hosts expect to find multiple entrypoint symbols provided by the Roc app (e.g. `init!`, `update!`, `render!`).
 - We compile and embed an interpreter shim into the Roc CLI which exposes a single generic entrypoint.
 - At runtime, the Roc CLI generates a tiny LLVM bitcode file that defines the expected host symbols and delegates them to the single interpreter entrypoint.
-- This enables fast dev loops using the interpreter for multi-entrypoint hosts.
+- This enables fast dev loops using the interpreter for multi-entrypoint hosts -- without changing the host ABI!
 
 ## Background: Roc App + Platform Host = Executable
 
