@@ -19,6 +19,7 @@ You can find me on [GitHub](https://github.com/lukewilliamboswell), or [LinkedIn
 
 I hope to write more about things I am learning...
 
+- *30 Aug 2025* [Roc Platforms: Supporting multi-entrypoint hosts](/roc-platforms-multi-entrypoint)
 - *03 Nov 2024* [Ball physics simulation](/roc-ray-ball-physics)
 - *19 Jun 2024* [Fullstack Roc + htmx—Data Table](/roc-htmx-demo-3)
 - *14 Mar 2024* [Building a Text Editor—Terminal UI](/text-editor-tui)
